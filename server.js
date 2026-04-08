@@ -1,115 +1,126 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
 
-// Allow large file transfers (up to 100MB)
 const io = new Server(server, {
-  maxHttpBufferSize: 100 * 1024 * 1024
+  maxHttpBufferSize: 100 * 1024 * 1024 // 100MB
 });
 
 app.use(express.static('public'));
 
-// ── STORAGE ──────────────────────────────────────────────
-// Stores the latest share for each code { code: { type, data, name } }
-const latestShare = {};
+// ── STORAGE ──────────────────────────────────────────
+const latestShare = {};   // { code: { type, data, name, size } }
+const rooms = {};         // { roomCode: Set of socket.ids }
+const usedCodes = new Set(); // tracks all ever-used room codes
 
-// Stores room members { roomCode: Set of socket.ids }
-const rooms = {};
+// ── GENERATE UNIQUE ROOM CODE ─────────────────────────
+// Uses UUID + timestamp to guarantee uniqueness even at scale
+function generateRoomCode() {
+  let code;
+  do {
+    // Take first 4 chars of a uuid-based number
+    const raw = uuidv4().replace(/-/g, '');
+    // Convert hex chunk to a 4-digit number (1000–9999)
+    code = String(parseInt(raw.slice(0, 4), 16) % 9000 + 1000);
+  } while (usedCodes.has(code) || rooms[code]);
+  // Mark this code as permanently used
+  usedCodes.add(code);
+  return code;
+}
 
-// ── CONNECTIONS ───────────────────────────────────────────
+// ── CONNECTIONS ───────────────────────────────────────
 io.on('connection', (socket) => {
   console.log('Connected:', socket.id);
 
-  // ── SEND (single user) ─────────────────────────────────
-  // Sender emits this with a code + content
-  socket.on('share-content', ({ code, type, data, name }) => {
-    // Save the latest share for this code on the server
-    latestShare[code] = { type, data, name };
-    console.log(`Content shared on code ${code} | type: ${type}`);
+  // ── REQUEST A NEW ROOM CODE ───────────────────────
+  socket.on('request-room-code', () => {
+    const code = generateRoomCode();
+    socket.emit('room-code-generated', code);
+  });
 
-    // Confirm to sender
+  // ── SIMPLE SEND ───────────────────────────────────
+  socket.on('share-content', ({ code, type, data, name, size }) => {
+    latestShare[code] = { type, data, name, size };
+    console.log(`Shared on code ${code} | type: ${type} | name: ${name}`);
     socket.emit('share-confirmed', code);
   });
 
-  // ── RECEIVE (single user) ──────────────────────────────
-  // Receiver enters a code to get the latest shared content
+  // ── SIMPLE RECEIVE ────────────────────────────────
   socket.on('get-content', (code) => {
     if (latestShare[code]) {
-      // Send the stored content back to this user only
       socket.emit('content-received', latestShare[code]);
     } else {
-      // Nothing shared on this code yet
       socket.emit('content-not-found');
     }
   });
 
-  // ── CREATE ROOM (multi user) ───────────────────────────
+  // ── CREATE ROOM ───────────────────────────────────
   socket.on('create-room', (roomCode) => {
-    // Initialize the room if it doesn't exist
-    if (!rooms[roomCode]) {
-      rooms[roomCode] = new Set();
-    }
+    if (!rooms[roomCode]) rooms[roomCode] = new Set();
     rooms[roomCode].add(socket.id);
     socket.join(roomCode);
-
-    // Store which room this socket is in (for cleanup on disconnect)
     socket.currentRoom = roomCode;
-
-    console.log(`Room created: ${roomCode} by ${socket.id}`);
+    console.log(`Room created: ${roomCode}`);
     socket.emit('room-created', roomCode);
-    updateRoomCount(roomCode);
+    broadcastRoomCount(roomCode);
   });
 
-  // ── JOIN ROOM (multi user) ─────────────────────────────
+  // ── JOIN ROOM ─────────────────────────────────────
   socket.on('join-room', (roomCode) => {
     if (!rooms[roomCode]) {
-      // Room doesn't exist
       socket.emit('room-not-found');
       return;
     }
     rooms[roomCode].add(socket.id);
     socket.join(roomCode);
     socket.currentRoom = roomCode;
-
     console.log(`${socket.id} joined room: ${roomCode}`);
     socket.emit('room-joined', roomCode);
-
-    // Tell everyone else in the room someone joined
     socket.to(roomCode).emit('user-joined-room');
-    updateRoomCount(roomCode);
+    broadcastRoomCount(roomCode);
   });
 
-  // ── ROOM MESSAGE (multi user) ──────────────────────────
+  // ── ROOM TEXT MESSAGE ─────────────────────────────
   socket.on('room-message', ({ roomCode, message }) => {
-    // Send message to everyone ELSE in the room
-    socket.to(roomCode).emit('room-message-received', message);
+    socket.to(roomCode).emit('room-message-received', {
+      type: 'text',
+      message
+    });
   });
 
-  // ── DISCONNECT ─────────────────────────────────────────
+  // ── ROOM FILE SHARE ───────────────────────────────
+  socket.on('room-file', ({ roomCode, data, name, size, fileType }) => {
+    // Forward file to everyone else in the room
+    socket.to(roomCode).emit('room-message-received', {
+      type: 'file',
+      data,
+      name,
+      size,
+      fileType
+    });
+    console.log(`File shared in room ${roomCode}: ${name}`);
+  });
+
+  // ── DISCONNECT ────────────────────────────────────
   socket.on('disconnect', () => {
     console.log('Disconnected:', socket.id);
-
-    // Remove from room if they were in one
     if (socket.currentRoom && rooms[socket.currentRoom]) {
       rooms[socket.currentRoom].delete(socket.id);
-
-      // Delete room if empty
       if (rooms[socket.currentRoom].size === 0) {
         delete rooms[socket.currentRoom];
-        console.log(`Room ${socket.currentRoom} deleted (empty)`);
+        console.log(`Room ${socket.currentRoom} closed`);
       } else {
-        // Tell others someone left
         socket.to(socket.currentRoom).emit('user-left-room');
-        updateRoomCount(socket.currentRoom);
+        broadcastRoomCount(socket.currentRoom);
       }
     }
   });
 
-  // ── HELPER: broadcast member count to a room ───────────
-  function updateRoomCount(roomCode) {
+  function broadcastRoomCount(roomCode) {
     const count = rooms[roomCode] ? rooms[roomCode].size : 0;
     io.to(roomCode).emit('room-count', count);
   }
