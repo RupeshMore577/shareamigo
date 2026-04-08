@@ -1,0 +1,95 @@
+/* ── CSS VARIABLES ──────────────────────────────────────
+   All color tokens live here.
+   Changing theme = just swapping these values.
+──────────────────────────────────────────────────────── */
+:root {
+  --bg:         #080808;
+  --surface:    #111111;
+  --surface2:   #181818;
+  --border:     #252525;
+  --accent:     #00e5ff;
+  --accent2:    #ff3cac;
+  --accent3:    #7b2fff;
+  --text:       #f0f0f0;
+  --muted:      #555555;
+  --success:    #00ff88;
+  --danger:     #ff4444;
+  --card-hover: #161616;
+}
+
+/* Light mode — all tokens flipped to light values */
+[data-theme="light"] {
+  --bg:         #f5f4f0;
+  --surface:    #ffffff;
+  --surface2:   #f0eeea;
+  --border:     #e0ddd6;
+  --accent:     #0077cc;
+  --accent2:    #cc1a6b;
+  --accent3:    #5b1fcc;
+  --text:       #1a1a1a;
+  --muted:      #888888;
+  --success:    #009955;
+  --danger:     #cc2222;
+  --card-hover: #fafaf8;
+}
+
+/* ── THEME TOGGLE BAR ────────────────────────────────── */
+.theme-bar {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 4px;
+  transition: background 0.3s;
+}
+
+.theme-btn {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: 'EB Garamond', serif;
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-btn.active {
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+}
+
+/* ── ANIMATIONS ──────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes blob {
+  to { transform: translate(280px, 280px); }
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}

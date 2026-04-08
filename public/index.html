@@ -1,896 +1,223 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shreamigo</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-  <style>
-    :root {
-      --bg: #080808;
-      --surface: #111111;
-      --surface2: #181818;
-      --border: #222222;
-      --accent: #00e5ff;
-      --accent2: #ff3cac;
-      --accent3: #7b2fff;
-      --text: #f0f0f0;
-      --muted: #555555;
-      --success: #00ff88;
-      --danger: #ff4444;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'DM Mono', monospace;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* Animated background grid */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 40px 40px;
-      opacity: 0.4;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Glow blob */
-    body::after {
-      content: '';
-      position: fixed;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, #00e5ff18 0%, transparent 70%);
-      top: -200px;
-      left: -200px;
-      pointer-events: none;
-      z-index: 0;
-      animation: blobMove 10s ease-in-out infinite alternate;
-    }
-
-    @keyframes blobMove {
-      to { transform: translate(300px, 300px); }
-    }
-
-    /* ── LANDING PAGE ───────────────────────── */
-    #landing {
-      position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-      animation: fadeUp 0.6s ease both;
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .logo {
-      font-family: 'Syne', sans-serif;
-      font-size: clamp(42px, 8vw, 72px);
-      font-weight: 800;
-      letter-spacing: -2px;
-      background: linear-gradient(135deg, var(--accent), var(--accent3), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 8px;
-    }
-
-    .tagline {
-      color: var(--muted);
-      font-size: 13px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      margin-bottom: 64px;
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      width: 100%;
-      max-width: 740px;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px 24px;
-      cursor: pointer;
-      transition: all 0.25s ease;
-      position: relative;
-      overflow: hidden;
-      animation: fadeUp 0.6s ease both;
-    }
-
-    .card:nth-child(1) { animation-delay: 0.1s; }
-    .card:nth-child(2) { animation-delay: 0.2s; }
-    .card:nth-child(3) { animation-delay: 0.3s; }
-    .card:nth-child(4) { animation-delay: 0.4s; }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .card.send::before    { background: radial-gradient(circle at top left, #00e5ff11, transparent 60%); }
-    .card.receive::before { background: radial-gradient(circle at top left, #00ff8811, transparent 60%); }
-    .card.create::before  { background: radial-gradient(circle at top left, #7b2fff11, transparent 60%); }
-    .card.joinr::before   { background: radial-gradient(circle at top left, #ff3cac11, transparent 60%); }
-
-    .card:hover { transform: translateY(-4px); border-color: #333; }
-    .card:hover::before { opacity: 1; }
-
-    .card-icon {
-      font-size: 32px;
-      margin-bottom: 16px;
-      display: block;
-    }
-
-    .card-title {
-      font-family: 'Syne', sans-serif;
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-
-    .card.send    .card-title { color: var(--accent); }
-    .card.receive .card-title { color: var(--success); }
-    .card.create  .card-title { color: var(--accent3); }
-    .card.joinr   .card-title { color: var(--accent2); }
-
-    .card-desc {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    /* ── SCREENS ────────────────────────────── */
-    .screen {
-      display: none;
-      position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      padding: 32px 20px;
-      animation: fadeUp 0.4s ease both;
-      max-width: 560px;
-      margin: 0 auto;
-    }
-
-    .screen.active { display: block; }
-
-    .back-btn {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-family: 'DM Mono', monospace;
-      font-size: 12px;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-bottom: 32px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-
-    .back-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    .screen-title {
-      font-family: 'Syne', sans-serif;
-      font-size: 28px;
-      font-weight: 800;
-      margin-bottom: 4px;
-    }
-
-    .screen-sub {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 32px;
-    }
-
-    /* ── INPUTS & BUTTONS ───────────────────── */
-    .input-group { margin-bottom: 16px; }
-
-    label {
-      display: block;
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    input[type="text"],
-    textarea {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    input[type="text"]:focus,
-    textarea:focus { border-color: var(--accent); }
-
-    input.code-field {
-      font-size: 28px;
-      letter-spacing: 16px;
-      text-align: center;
-      font-weight: 700;
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 120px;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      font-family: 'Syne', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      letter-spacing: 0.5px;
-    }
-
-    .btn-accent  { background: var(--accent);  color: #000; }
-    .btn-success { background: var(--success);  color: #000; }
-    .btn-purple  { background: var(--accent3);  color: #fff; }
-    .btn-pink    { background: var(--accent2);  color: #fff; }
-
-    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
-
-    /* ── FILE DROP ZONE ─────────────────────── */
-    .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 32px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 16px;
-      position: relative;
-    }
-
-    .drop-zone:hover,
-    .drop-zone.dragover {
-      border-color: var(--accent);
-      background: #00e5ff08;
-    }
-
-    .drop-zone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      width: 100%;
-      height: 100%;
-    }
-
-    .drop-icon { font-size: 36px; margin-bottom: 8px; }
-    .drop-text { font-size: 13px; color: var(--muted); }
-    .drop-text span { color: var(--accent); }
-
-    .file-selected {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 12px;
-      color: var(--accent);
-      margin-bottom: 16px;
-      display: none;
-      word-break: break-all;
-    }
-
-    /* ── STATUS PILL ────────────────────────── */
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-radius: 100px;
-      font-size: 12px;
-      margin-bottom: 20px;
-      border: 1px solid;
-    }
-
-    .status-pill.success { border-color: var(--success); color: var(--success); background: #00ff8810; }
-    .status-pill.error   { border-color: var(--danger);  color: var(--danger);  background: #ff444410; }
-    .status-pill.info    { border-color: var(--accent);  color: var(--accent);  background: #00e5ff10; }
-    .status-pill { display: none; }
-
-    .dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: currentColor;
-      animation: pulse 1.2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.3; }
-    }
-
-    /* ── RECEIVED CONTENT ───────────────────── */
-    #received-box {
-      display: none;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      margin-top: 20px;
-    }
-
-    #received-box h3 {
-      font-family: 'Syne', sans-serif;
-      font-size: 14px;
-      color: var(--success);
-      margin-bottom: 12px;
-    }
-
-    #received-text {
-      font-size: 13px;
-      line-height: 1.7;
-      color: var(--text);
-      word-break: break-word;
-      white-space: pre-wrap;
-    }
-
-    .copy-btn {
-      margin-top: 12px;
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      padding: 6px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .copy-btn:hover { border-color: var(--success); color: var(--success); }
-
-    /* ── ROOM CHAT ───────────────────────────── */
-    #room-chat { display: none; }
-
-    .room-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      margin-bottom: 16px;
-    }
-
-    .room-code-tag {
-      font-family: 'Syne', sans-serif;
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--accent3);
-      letter-spacing: 4px;
-    }
-
-    .member-count {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    #room-messages {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      height: 260px;
-      overflow-y: auto;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .msg {
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      max-width: 80%;
-      line-height: 1.5;
-    }
-
-    .msg.me   { background: #00e5ff15; color: var(--accent); align-self: flex-end; border: 1px solid #00e5ff22; }
-    .msg.them { background: var(--surface2); color: var(--text); align-self: flex-start; }
-    .msg.sys  { background: none; color: var(--muted); font-size: 11px; align-self: center; font-style: italic; }
-
-    .room-input-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .room-input-row input {
-      flex: 1;
-      letter-spacing: 0;
-    }
-
-    .room-input-row button {
-      width: auto;
-      padding: 14px 20px;
-      flex-shrink: 0;
-    }
-
-    /* ── DIVIDER ─────────────────────────────── */
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 20px 0;
-      color: var(--muted);
-      font-size: 11px;
-      letter-spacing: 2px;
-    }
-
-    .divider::before,
-    .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    /* ── PROGRESS BAR ───────────────────────── */
-    .progress-wrap {
-      display: none;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      height: 6px;
-      overflow: hidden;
-      margin-bottom: 16px;
-    }
-
-    .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent3));
-      width: 0%;
-      transition: width 0.3s ease;
-      border-radius: 8px;
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/chat.css" />
 </head>
 <body>
 
-<!-- ══ LANDING ══════════════════════════════════════ -->
-<div id="landing">
-  <div class="logo">Shreamigo</div>
-  <div class="tagline">Share anything · Instantly · Anywhere</div>
-
-  <div class="cards">
-    <div class="card send" onclick="showScreen('send-screen')">
-      <span class="card-icon">📤</span>
-      <div class="card-title">Send</div>
-      <div class="card-desc">Share text or any file. Get a code to give the receiver.</div>
-    </div>
-
-    <div class="card receive" onclick="showScreen('receive-screen')">
-      <span class="card-icon">📥</span>
-      <div class="card-title">Receive</div>
-      <div class="card-desc">Enter a code to instantly get what was shared with you.</div>
-    </div>
-
-    <div class="card create" onclick="showScreen('create-screen')">
-      <span class="card-icon">🏠</span>
-      <div class="card-title">Create Room</div>
-      <div class="card-desc">Start a live room. Share the code with multiple people.</div>
-    </div>
-
-    <div class="card joinr" onclick="showScreen('join-screen')">
-      <span class="card-icon">🚪</span>
-      <div class="card-title">Join Room</div>
-      <div class="card-desc">Enter a room code to join a live group chat.</div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ SEND SCREEN ══════════════════════════════════ -->
-<div class="screen" id="send-screen">
-  <button class="back-btn" onclick="goHome()">← Back</button>
-  <div class="screen-title" style="color:var(--accent)">📤 Send</div>
-  <div class="screen-sub">Share text or a file — receiver uses the code to get it</div>
-
-  <div class="input-group">
-    <label>Your 4-digit code</label>
-    <input type="text" class="code-field" id="send-code" maxlength="4" placeholder="1234" />
+  <!-- ── THEME TOGGLE ───────────────────────────── -->
+  <div class="theme-bar">
+    <button class="theme-btn" onclick="setTheme('light')">Light</button>
+    <button class="theme-btn" onclick="setTheme('system')">Auto</button>
+    <button class="theme-btn active" onclick="setTheme('dark')">Dark</button>
   </div>
 
-  <div class="divider">choose what to share</div>
-
-  <div class="input-group">
-    <label>Text message</label>
-    <textarea id="send-text" placeholder="Type anything here..."></textarea>
-  </div>
-
-  <div class="divider">or</div>
-
-  <div class="drop-zone" id="drop-zone">
-    <input type="file" id="file-input" onchange="fileSelected()" />
-    <div class="drop-icon">📁</div>
-    <div class="drop-text">Drop any file here or <span>browse</span></div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px">Images, Videos, Docs, ZIP — up to 100MB</div>
-  </div>
-
-  <div class="file-selected" id="file-label"></div>
-
-  <div class="progress-wrap" id="send-progress-wrap">
-    <div class="progress-bar" id="send-progress-bar"></div>
-  </div>
-
-  <div class="status-pill" id="send-status"></div>
-
-  <button class="btn btn-accent" onclick="sendContent()">Send It →</button>
-</div>
-
-<!-- ══ RECEIVE SCREEN ════════════════════════════════ -->
-<div class="screen" id="receive-screen">
-  <button class="back-btn" onclick="goHome()">← Back</button>
-  <div class="screen-title" style="color:var(--success)">📥 Receive</div>
-  <div class="screen-sub">Enter the code the sender gave you</div>
-
-  <div class="input-group">
-    <label>4-digit code</label>
-    <input type="text" class="code-field" id="receive-code" maxlength="4" placeholder="1234" />
-  </div>
-
-  <div class="status-pill" id="receive-status"></div>
-
-  <button class="btn btn-success" onclick="receiveContent()">Get Content →</button>
-
-  <div id="received-box">
-    <h3>✅ Content Received</h3>
-    <div id="received-text"></div>
-    <a id="received-download" style="display:none">
-      <button class="btn btn-success" style="margin-top:12px">⬇ Download File</button>
-    </a>
-    <button class="copy-btn" id="copy-btn" onclick="copyReceived()">Copy Text</button>
-  </div>
-</div>
-
-<!-- ══ CREATE ROOM SCREEN ════════════════════════════ -->
-<div class="screen" id="create-screen">
-  <button class="back-btn" onclick="goHome()">← Back</button>
-  <div class="screen-title" style="color:var(--accent3)">🏠 Create Room</div>
-  <div class="screen-sub">Pick a 4-digit code — share it with your group</div>
-
-  <div class="input-group">
-    <label>Room code</label>
-    <input type="text" class="code-field" id="create-code" maxlength="4" placeholder="5678" />
-  </div>
-
-  <div class="status-pill" id="create-status"></div>
-
-  <button class="btn btn-purple" onclick="createRoom()">Create Room →</button>
-
-  <!-- Room chat appears here after creation -->
-  <div id="room-chat-create">
-    <div style="height:24px"></div>
-    <div class="room-header">
-      <div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:2px">ROOM CODE</div>
-        <div class="room-code-tag" id="created-room-tag"></div>
+  <!-- ── CLIPBOARD POPUP ────────────────────────── -->
+  <div class="popup-overlay" id="clipboard-popup">
+    <div class="popup">
+      <div class="popup-title">📋 Clipboard Detected</div>
+      <div class="popup-sub">You have something copied. Send it now?</div>
+      <div class="clipboard-preview" id="clipboard-preview-text"></div>
+      <div class="popup-btns">
+        <button class="btn btn-accent" onclick="clipboardToSend()">Simple Send</button>
+        <button class="btn btn-purple" onclick="clipboardToRoom()">Send to Room</button>
+        <button class="btn btn-ghost" onclick="closePopup()">Dismiss</button>
       </div>
-      <div class="member-count" id="create-member-count">1 member</div>
-    </div>
-    <div id="room-messages-create" class="room-messages-box" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;height:220px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;"></div>
-    <div class="room-input-row">
-      <input type="text" id="create-msg-input" placeholder="Message the room..." />
-      <button class="btn btn-purple" onclick="sendRoomMsg('create')" style="border-radius:10px">Send</button>
     </div>
   </div>
-</div>
 
-<!-- ══ JOIN ROOM SCREEN ══════════════════════════════ -->
-<div class="screen" id="join-screen">
-  <button class="back-btn" onclick="goHome()">← Back</button>
-  <div class="screen-title" style="color:var(--accent2)">🚪 Join Room</div>
-  <div class="screen-sub">Enter the room code to join the group</div>
-
-  <div class="input-group">
-    <label>Room code</label>
-    <input type="text" class="code-field" id="join-code" maxlength="4" placeholder="5678" />
-  </div>
-
-  <div class="status-pill" id="join-status"></div>
-
-  <button class="btn btn-pink" onclick="joinRoom()">Join Room →</button>
-
-  <div id="room-chat-join">
-    <div style="height:24px"></div>
-    <div class="room-header">
-      <div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:2px">ROOM CODE</div>
-        <div class="room-code-tag" id="joined-room-tag"></div>
+  <!-- ══ LANDING ══════════════════════════════════ -->
+  <div id="landing">
+    <div class="logo">Shreamigo</div>
+    <div class="tagline">Share anything · Instantly · Anywhere</div>
+    <button class="sync-landing-btn" onclick="checkClipboard()">
+      📋 Sync Clipboard
+    </button>
+    <div class="cards">
+      <div class="card send" onclick="showScreen('send-screen')">
+        <span class="card-icon">📤</span>
+        <div class="card-title">Send</div>
+        <div class="card-desc">Share text or any file. Receiver uses the code to get it.</div>
       </div>
-      <div class="member-count" id="join-member-count">— members</div>
-    </div>
-    <div id="room-messages-join" class="room-messages-box" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;height:220px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;"></div>
-    <div class="room-input-row">
-      <input type="text" id="join-msg-input" placeholder="Message the room..." />
-      <button class="btn btn-pink" onclick="sendRoomMsg('join')" style="border-radius:10px">Send</button>
+      <div class="card receive" onclick="showScreen('receive-screen')">
+        <span class="card-icon">📥</span>
+        <div class="card-title">Receive</div>
+        <div class="card-desc">Enter a code to instantly get what was shared.</div>
+      </div>
+      <div class="card create" onclick="showScreen('create-screen')">
+        <span class="card-icon">🏠</span>
+        <div class="card-title">Create Room</div>
+        <div class="card-desc">Start a live room. Share code with multiple people.</div>
+      </div>
+      <div class="card joinr" onclick="showScreen('join-screen')">
+        <span class="card-icon">🚪</span>
+        <div class="card-title">Join Room</div>
+        <div class="card-desc">Enter a room code to join a live group chat.</div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Socket.io client -->
-<script src="/socket.io/socket.io.js"></script>
+  <!-- ══ SEND SCREEN ══════════════════════════════ -->
+  <div class="screen" id="send-screen">
+    <button class="back-btn" onclick="goHome()">← Back</button>
+    <div class="screen-title" style="color:var(--accent)">📤 Send</div>
+    <div class="screen-sub">Your private code is auto-generated — give it to the receiver</div>
 
-<script>
-  const socket = io();
+    <label>Your secure send code</label>
+    <div class="code-display" style="margin-bottom:20px">
+      <div class="big-code" id="send-code-display">—</div>
+      <button class="refresh-btn" title="New code" onclick="requestSendCode()">↻</button>
+    </div>
 
-  // Track which room we're in
-  let currentRoom = '';
-  let currentRoomType = ''; // 'create' or 'join'
-  let selectedFile = null;
+    <div class="divider">text</div>
+    <div class="input-group">
+      <label>Message</label>
+      <textarea id="send-text" placeholder="Type anything here..."></textarea>
+    </div>
 
-  // ── NAVIGATION ───────────────────────────────────────
-  function showScreen(id) {
-    document.getElementById('landing').style.display = 'none';
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  }
+    <div class="divider">or file</div>
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" onchange="fileSelected()" />
+      <div class="drop-icon">📁</div>
+      <div class="drop-text">Drop any file here or <span>browse</span></div>
+      <div class="drop-hint">ZIP, APK, PDF, PPT, images, video — up to 100MB</div>
+    </div>
 
-  function goHome() {
-    document.getElementById('landing').style.display = 'flex';
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    // Reset room chats
-    document.getElementById('room-chat-create').style.display = 'none';
-    document.getElementById('room-chat-join').style.display = 'none';
-    currentRoom = '';
-  }
+    <div class="file-card" id="send-file-card">
+      <div class="file-type-badge" id="send-file-ext">---</div>
+      <div class="file-info">
+        <div class="file-name" id="send-file-label">—</div>
+        <div class="file-size" id="send-file-size">—</div>
+      </div>
+    </div>
 
-  // ── STATUS HELPERS ───────────────────────────────────
-  function showStatus(id, type, msg) {
-    const el = document.getElementById(id);
-    el.className = `status-pill ${type}`;
-    el.style.display = 'inline-flex';
-    el.innerHTML = `<span class="dot"></span>${msg}`;
-  }
+    <div class="progress-wrap" id="send-progress-wrap">
+      <div class="progress-bar" id="send-progress-bar"></div>
+    </div>
 
-  function hideStatus(id) {
-    document.getElementById(id).style.display = 'none';
-  }
+    <div class="status-pill" id="send-status"></div>
+    <button class="btn btn-accent" onclick="sendContent()">Send It →</button>
+  </div>
 
-  // ── FILE SELECTION ───────────────────────────────────
-  function fileSelected() {
-    const file = document.getElementById('file-input').files[0];
-    if (!file) return;
-    selectedFile = file;
-    const label = document.getElementById('file-label');
-    label.style.display = 'block';
-    label.textContent = `📎 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-  }
+  <!-- ══ RECEIVE SCREEN ════════════════════════════ -->
+  <div class="screen" id="receive-screen">
+    <button class="back-btn" onclick="goHome()">← Back</button>
+    <div class="screen-title" style="color:var(--success)">📥 Receive</div>
+    <div class="screen-sub">Enter the secure code the sender gave you</div>
 
-  // Drag and drop
-  const dropZone = document.getElementById('drop-zone');
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      selectedFile = file;
-      const label = document.getElementById('file-label');
-      label.style.display = 'block';
-      label.textContent = `📎 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-    }
-  });
+    <div class="input-group">
+      <label>Secure code</label>
+      <input type="text" class="code-field" id="receive-code"
+             maxlength="8" placeholder="e.g. aB3xYz9Q" />
+    </div>
 
-  // ── SEND ─────────────────────────────────────────────
-  function sendContent() {
-    const code = document.getElementById('send-code').value.trim();
-    const text = document.getElementById('send-text').value.trim();
+    <div class="status-pill" id="receive-status"></div>
+    <button class="btn btn-success" onclick="receiveContent()">Get Content →</button>
 
-    if (code.length !== 4) { showStatus('send-status', 'error', 'Enter a 4-digit code'); return; }
-    if (!text && !selectedFile) { showStatus('send-status', 'error', 'Add text or a file to share'); return; }
+    <div id="received-box">
+      <h3>✓ Content Received</h3>
+      <div id="received-text"></div>
+      <a id="received-download" style="display:none">
+        <button class="btn btn-success" style="margin-top:12px">⬇ Download File</button>
+      </a>
+      <button class="copy-btn" id="copy-btn" onclick="copyReceived()">Copy</button>
+    </div>
+  </div>
 
-    showStatus('send-status', 'info', 'Sending...');
+  <!-- ══ CREATE ROOM SCREEN ════════════════════════ -->
+  <div class="screen" id="create-screen">
+    <button class="back-btn" onclick="goHome()">← Back</button>
+    <div class="screen-title" style="color:var(--accent3)">🏠 Create Room</div>
+    <div class="screen-sub">A unique secure code is generated for your room</div>
 
-    if (selectedFile) {
-      // Read file as base64
-      const reader = new FileReader();
+    <label>Your room code</label>
+    <div class="code-display" style="margin-bottom:20px">
+      <div class="big-code" id="create-code-display">—</div>
+      <button class="refresh-btn" title="New code" onclick="requestRoomCode()">↻</button>
+    </div>
 
-      // Show progress bar
-      document.getElementById('send-progress-wrap').style.display = 'block';
-      document.getElementById('send-progress-bar').style.width = '40%';
+    <div class="status-pill" id="create-status"></div>
+    <button class="btn btn-purple" id="create-room-btn"
+            onclick="createRoom()" disabled>Create Room →</button>
 
-      reader.onload = (e) => {
-        document.getElementById('send-progress-bar').style.width = '80%';
-        socket.emit('share-content', {
-          code,
-          type: 'file',
-          data: e.target.result,        // base64 string
-          name: selectedFile.name
-        });
-      };
-      reader.readAsDataURL(selectedFile);
-    } else {
-      // Text only
-      socket.emit('share-content', { code, type: 'text', data: text, name: '' });
-    }
-  }
+    <div id="room-area-create" style="display:none">
+      <div style="height:20px"></div>
+      <div class="room-header">
+        <div>
+          <div class="room-label">ROOM</div>
+          <div class="room-code-tag" style="color:var(--accent3)"
+               id="created-room-tag"></div>
+        </div>
+        <div class="member-count" id="create-member-count">1 member</div>
+      </div>
+      <div class="messages-box" id="msgs-create"></div>
+      <div class="room-input-row">
+        <button class="room-file-btn" title="Share file">
+          📎
+          <input type="file" onchange="sendRoomFile(this,'create')" />
+        </button>
+        <input type="text" id="create-msg-input"
+               placeholder="Message the room..." />
+        <button class="btn btn-purple send-btn"
+                onclick="sendRoomMsg('create')">Send</button>
+      </div>
+    </div>
+  </div>
 
-  // Server confirms share
-  socket.on('share-confirmed', (code) => {
-    document.getElementById('send-progress-bar').style.width = '100%';
-    setTimeout(() => {
-      document.getElementById('send-progress-wrap').style.display = 'none';
-      document.getElementById('send-progress-bar').style.width = '0%';
-    }, 800);
-    showStatus('send-status', 'success', `Shared! Code: ${code}`);
-  });
+  <!-- ══ JOIN ROOM SCREEN ══════════════════════════ -->
+  <div class="screen" id="join-screen">
+    <button class="back-btn" onclick="goHome()">← Back</button>
+    <div class="screen-title" style="color:var(--accent2)">🚪 Join Room</div>
+    <div class="screen-sub">Enter the secure room code to join</div>
 
-  // ── RECEIVE ──────────────────────────────────────────
-  function receiveContent() {
-    const code = document.getElementById('receive-code').value.trim();
-    if (code.length !== 4) { showStatus('receive-status', 'error', 'Enter a 4-digit code'); return; }
-    showStatus('receive-status', 'info', 'Looking up code...');
-    socket.emit('get-content', code);
-  }
+    <div class="input-group">
+      <label>Room code</label>
+      <input type="text" class="code-field" id="join-code"
+             maxlength="8" placeholder="e.g. aB3xYz9Q" />
+    </div>
 
-  socket.on('content-received', ({ type, data, name }) => {
-    hideStatus('receive-status');
-    const box = document.getElementById('received-box');
-    box.style.display = 'block';
+    <div class="status-pill" id="join-status"></div>
+    <button class="btn btn-pink" onclick="joinRoom()">Join Room →</button>
 
-    if (type === 'text') {
-      document.getElementById('received-text').textContent = data;
-      document.getElementById('copy-btn').style.display = 'inline-block';
-      document.getElementById('received-download').style.display = 'none';
-    } else {
-      // File — create a download link
-      document.getElementById('received-text').textContent = `📎 ${name}`;
-      document.getElementById('copy-btn').style.display = 'none';
-      const dl = document.getElementById('received-download');
-      dl.href = data;
-      dl.download = name;
-      dl.style.display = 'block';
-    }
-  });
+    <div id="room-area-join" style="display:none">
+      <div style="height:20px"></div>
+      <div class="room-header">
+        <div>
+          <div class="room-label">ROOM</div>
+          <div class="room-code-tag" style="color:var(--accent2)"
+               id="joined-room-tag"></div>
+        </div>
+        <div class="member-count" id="join-member-count">— members</div>
+      </div>
+      <div class="messages-box" id="msgs-join"></div>
+      <div class="room-input-row">
+        <button class="room-file-btn" title="Share file">
+          📎
+          <input type="file" onchange="sendRoomFile(this,'join')" />
+        </button>
+        <input type="text" id="join-msg-input"
+               placeholder="Message the room..." />
+        <button class="btn btn-pink send-btn"
+                onclick="sendRoomMsg('join')">Send</button>
+      </div>
+    </div>
+  </div>
 
-  socket.on('content-not-found', () => {
-    showStatus('receive-status', 'error', 'Nothing found for this code');
-  });
-
-  function copyReceived() {
-    const text = document.getElementById('received-text').textContent;
-    navigator.clipboard.writeText(text).then(() => {
-      document.getElementById('copy-btn').textContent = '✓ Copied!';
-      setTimeout(() => document.getElementById('copy-btn').textContent = 'Copy Text', 2000);
-    });
-  }
-
-  // ── CREATE ROOM ──────────────────────────────────────
-  function createRoom() {
-    const code = document.getElementById('create-code').value.trim();
-    if (code.length !== 4) { showStatus('create-status', 'error', 'Enter a 4-digit room code'); return; }
-    currentRoomType = 'create';
-    socket.emit('create-room', code);
-  }
-
-  socket.on('room-created', (code) => {
-    currentRoom = code;
-    hideStatus('create-status');
-    document.getElementById('created-room-tag').textContent = code;
-    document.getElementById('room-chat-create').style.display = 'block';
-    addRoomMsg('create', 'Room created. Share code ' + code + ' with your group 🎉', 'sys');
-  });
-
-  // ── JOIN ROOM ────────────────────────────────────────
-  function joinRoom() {
-    const code = document.getElementById('join-code').value.trim();
-    if (code.length !== 4) { showStatus('join-status', 'error', 'Enter a 4-digit room code'); return; }
-    currentRoomType = 'join';
-    socket.emit('join-room', code);
-  }
-
-  socket.on('room-joined', (code) => {
-    currentRoom = code;
-    hideStatus('join-status');
-    document.getElementById('joined-room-tag').textContent = code;
-    document.getElementById('room-chat-join').style.display = 'block';
-    addRoomMsg('join', 'You joined room ' + code + ' 👋', 'sys');
-  });
-
-  socket.on('room-not-found', () => {
-    showStatus('join-status', 'error', 'Room not found. Check the code.');
-  });
-
-  // ── ROOM EVENTS ──────────────────────────────────────
-  socket.on('user-joined-room', () => {
-    addRoomMsg(currentRoomType, 'Someone joined the room 👋', 'sys');
-  });
-
-  socket.on('user-left-room', () => {
-    addRoomMsg(currentRoomType, 'Someone left the room', 'sys');
-  });
-
-  socket.on('room-count', (count) => {
-    const label = count === 1 ? '1 member' : `${count} members`;
-    if (currentRoomType === 'create') document.getElementById('create-member-count').textContent = label;
-    if (currentRoomType === 'join')   document.getElementById('join-member-count').textContent = label;
-  });
-
-  socket.on('room-message-received', (message) => {
-    addRoomMsg(currentRoomType, message, 'them');
-  });
-
-  // ── SEND ROOM MESSAGE ────────────────────────────────
-  function sendRoomMsg(type) {
-    const inputId = type === 'create' ? 'create-msg-input' : 'join-msg-input';
-    const input = document.getElementById(inputId);
-    const message = input.value.trim();
-    if (!message || !currentRoom) return;
-
-    addRoomMsg(type, message, 'me');
-    socket.emit('room-message', { roomCode: currentRoom, message });
-    input.value = '';
-  }
-
-  // ── ADD MESSAGE BUBBLE ───────────────────────────────
-  function addRoomMsg(type, text, side) {
-    const boxId = type === 'create' ? 'room-messages-create' : 'room-messages-join';
-    const box = document.getElementById(boxId);
-    const div = document.createElement('div');
-    div.classList.add('msg', side);
-    div.textContent = text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-  }
-
-  // ── ENTER KEY SUPPORT ────────────────────────────────
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    if (document.getElementById('create-msg-input') === document.activeElement) sendRoomMsg('create');
-    if (document.getElementById('join-msg-input')   === document.activeElement) sendRoomMsg('join');
-    if (document.getElementById('create-code')      === document.activeElement) createRoom();
-    if (document.getElementById('join-code')         === document.activeElement) joinRoom();
-    if (document.getElementById('send-code')         === document.activeElement) sendContent();
-    if (document.getElementById('receive-code')      === document.activeElement) receiveContent();
-  });
-</script>
+  <!-- ── SCRIPTS (order matters) ────────────────── -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/clipboard.js"></script>
+  <script src="js/socket.js"></script>
+  <script src="js/send.js"></script>
+  <script src="js/receive.js"></script>
+  <script src="js/room.js"></script>
 </body>
 </html>

@@ -1,0 +1,284 @@
+/* ── BACK BUTTON ─────────────────────────────────────── */
+.back-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'EB Garamond', serif;
+  font-size: 15px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── FORM LABELS ─────────────────────────────────────── */
+label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.input-group { margin-bottom: 16px; }
+
+/* ── TEXT INPUTS & TEXTAREA ──────────────────────────── */
+input[type="text"],
+textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 13px 16px;
+  color: var(--text);
+  font-family: 'EB Garamond', serif;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+input[type="text"]:focus,
+textarea:focus { border-color: var(--accent); }
+
+/* Code input field — used in receive + join screens */
+input.code-field {
+  font-size: 22px;
+  letter-spacing: 8px;
+  text-align: center;
+  font-weight: 700;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.6;
+}
+
+/* ── CODE DISPLAY BOX (auto-generated codes) ─────────── */
+.code-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+/* The actual code text inside the display box */
+.big-code {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  flex: 1;
+  text-align: center;
+  word-break: break-all;
+}
+
+/* Refresh button next to code */
+.refresh-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 18px;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+/* ── BUTTONS ─────────────────────────────────────────── */
+.btn {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'EB Garamond', serif;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.btn-accent  { background: var(--accent);  color: #000; }
+.btn-success { background: var(--success); color: #000; }
+.btn-purple  { background: var(--accent3); color: #fff; }
+.btn-pink    { background: var(--accent2); color: #fff; }
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+.btn:active { transform: translateY(0); opacity: 1; }
+
+/* ── FILE DROP ZONE ──────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--accent);
+  background: #00e5ff06;
+}
+
+.drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.drop-icon { font-size: 32px; margin-bottom: 6px; }
+.drop-text { font-size: 14px; color: var(--muted); font-style: italic; }
+.drop-text span { color: var(--accent); }
+.drop-hint { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
+
+/* ── FILE PREVIEW CARD ───────────────────────────────── */
+.file-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: none;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-card.show { display: flex; }
+
+.file-type-badge {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.file-info  { flex: 1; min-width: 0; }
+.file-name  { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-size  { font-size: 12px; color: var(--muted); font-style: italic; }
+
+/* ── PROGRESS BAR ────────────────────────────────────── */
+.progress-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  display: none;
+}
+
+.progress-wrap.show { display: block; }
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent3));
+  width: 0%;
+  transition: width 0.4s ease;
+  border-radius: 100px;
+}
+
+/* ── STATUS PILL ─────────────────────────────────────── */
+.status-pill {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  border: 1px solid;
+  font-style: italic;
+}
+
+.status-pill.show    { display: inline-flex; }
+.status-pill.success { border-color: var(--success); color: var(--success); background: #00ff8810; }
+.status-pill.error   { border-color: var(--danger);  color: var(--danger);  background: #ff444410; }
+.status-pill.info    { border-color: var(--accent);  color: var(--accent);  background: #00e5ff10; }
+
+/* Animated dot inside status pill */
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.2s infinite;
+  flex-shrink: 0;
+}
+
+/* ── RECEIVED CONTENT BOX ────────────────────────────── */
+#received-box {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  animation: fadeUp 0.3s ease;
+}
+
+#received-box h3 {
+  font-size: 18px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--success);
+  margin-bottom: 12px;
+}
+
+#received-text {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.copy-btn {
+  margin-top: 12px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'EB Garamond', serif;
+  font-size: 14px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover { border-color: var(--success); color: var(--success); }
