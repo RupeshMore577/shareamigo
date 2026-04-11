@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/chat.css" />
+  <link rel="stylesheet" href="css/auth.css" />
 </head>
 <body>
 
@@ -35,7 +36,7 @@
 
   <!-- ══ LANDING ══════════════════════════════════ -->
   <div id="landing">
-    <div class="logo">Shreamigo</div>
+    <div class="logo">Shareamigo</div>
     <div class="tagline">Share anything · Instantly · Anywhere</div>
     <button class="sync-landing-btn" onclick="checkClipboard()">
       📋 Sync Clipboard
@@ -63,6 +64,14 @@
       </div>
     </div>
   </div>
+
+  <!-- ── USER STATUS BAR ────────────────────────────── -->
+<div id="user-status-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <div class="user-avatar" id="user-status-avatar">?</div>
+  <span id="user-status-name">Guest</span>
+  <button class="logout-btn" onclick="logout()">Sign out</button>
+</div>
 
   <!-- ══ SEND SCREEN ══════════════════════════════ -->
   <div class="screen" id="send-screen">
@@ -219,5 +228,45 @@
   <script src="js/send.js"></script>
   <script src="js/receive.js"></script>
   <script src="js/room.js"></script>
+  <!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- Our scripts -->
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/firebase.js"></script>
+<script src="js/app.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/clipboard.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/socket.js"></script>
+<script src="js/send.js"></script>
+<script src="js/receive.js"></script>
+<script src="js/room.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+  // Check if user is logged in or guest when main app loads
+  window.addEventListener('load', () => {
+    const isGuest = sessionStorage.getItem('shareamigo-guest');
+    if (isGuest) {
+      // Guest mode — skip auth check, show app directly
+      updateUserStatus(null);
+      return;
+    }
+    // Check Firebase session
+    auth.onAuthStateChanged((user) => {
+      if (!user) {
+        // Not logged in and not guest → send to login
+        window.location.href = 'login.html';
+      } else {
+        // Logged in → show status bar and start sync
+        updateUserStatus(user);
+        startClipboardSync(user.uid);
+      }
+    });
+  });
+</script>
 </body>
 </html>

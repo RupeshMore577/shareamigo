@@ -1,0 +1,256 @@
+/* ── AUTH PAGE WRAPPER ───────────────────────────────── */
+#login-page {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeUp 0.5s ease both;
+}
+
+/* Grid background same as main app */
+#login-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Glow blob */
+#login-page::after {
+  content: '';
+  position: fixed;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #00e5ff10 0%, transparent 70%);
+  top: -100px;
+  right: -100px;
+  pointer-events: none;
+  animation: blob 10s ease-in-out infinite alternate;
+}
+
+/* ── AUTH CARD ───────────────────────────────────────── */
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  z-index: 1;
+  animation: slideIn 0.4s ease both;
+}
+
+/* ── AUTH LOGO ───────────────────────────────────────── */
+.auth-logo {
+  font-size: 36px;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, var(--accent), var(--accent3), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.auth-tagline {
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 28px;
+  letter-spacing: 1px;
+}
+
+/* ── FORM TITLE ──────────────────────────────────────── */
+.auth-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+/* ── AUTH INPUTS ─────────────────────────────────────── */
+.auth-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 13px 16px;
+  color: var(--text);
+  font-family: 'EB Garamond', serif;
+  font-size: 16px;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+
+.auth-input:focus { border-color: var(--accent); }
+
+.auth-input::placeholder { color: var(--muted); }
+
+/* ── AUTH BUTTONS ────────────────────────────────────── */
+.auth-btn {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'EB Garamond', serif;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 10px;
+}
+
+.auth-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+.auth-btn:active { transform: translateY(0); }
+
+.auth-btn-primary { background: var(--accent);  color: #000; }
+.auth-btn-google  { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.auth-btn-guest   { background: none; border: 1px solid var(--border); color: var(--muted); }
+
+/* Google icon inside button */
+.google-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* ── DIVIDER ─────────────────────────────────────────── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── SWITCH LINK ─────────────────────────────────────── */
+.auth-switch {
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 16px;
+}
+
+.auth-switch span {
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.auth-switch span:hover { text-decoration: underline; }
+
+/* ── ERROR & LOADING MESSAGES ────────────────────────── */
+#auth-error {
+  display: none;
+  background: #ff444415;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+#auth-loading {
+  display: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-style: italic;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* ── USER STATUS BAR ─────────────────────────────────── */
+#user-status-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 8px 16px 8px 8px;
+  font-size: 14px;
+  box-shadow: 0 4px 24px #00000033;
+  white-space: nowrap;
+}
+
+/* Avatar circle */
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent3), var(--accent2));
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#user-status-name {
+  color: var(--text);
+  font-weight: 500;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Logout button inside status bar */
+.logout-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'EB Garamond', serif;
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 4px;
+}
+
+.logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ── SYNC INDICATOR ──────────────────────────────────── */
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+.sync-dot.off { background: var(--muted); animation: none; }
