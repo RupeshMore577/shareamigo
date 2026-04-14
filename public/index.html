@@ -4,15 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shreamigo</title>
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/feature.css" />
   <link rel="stylesheet" href="css/chat.css" />
   <link rel="stylesheet" href="css/auth.css" />
 </head>
 <body>
-
   <!-- ── THEME TOGGLE ───────────────────────────── -->
   <div class="theme-bar">
     <button class="theme-btn" onclick="setTheme('light')">Light</button>
@@ -65,13 +65,37 @@
     </div>
   </div>
 
-  <!-- ── USER STATUS BAR ────────────────────────────── -->
-<div id="user-status-bar">
-  <div class="sync-dot" id="sync-dot"></div>
-  <div class="user-avatar" id="user-status-avatar">?</div>
-  <span id="user-status-name">Guest</span>
-  <button class="logout-btn" onclick="logout()">Sign out</button>
-</div>
+  <!-- ── USER STATUS BAR ────────────────────────── -->
+  <div id="user-status-bar">
+    <div class="sync-dot" id="sync-dot"></div>
+    <div class="user-avatar" id="user-status-avatar">?</div>
+    <span id="user-status-name">Guest</span>
+    <button class="history-toggle-btn" onclick="toggleHistory()">History</button>
+    <button class="logout-btn" onclick="logout()">Sign out</button>
+  </div>
+
+  <!-- ── NOTIFICATION BANNER ────────────────────── -->
+  <div class="notif-banner" id="notif-banner">
+    <span>Enable notifications to know when someone joins or shares</span>
+    <button class="notif-banner-btn" onclick="requestNotifPermission()">Enable</button>
+    <button
+      class="notif-banner-btn"
+      style="background:none;border:1px solid var(--border);color:var(--muted)"
+      onclick="hideNotifBanner()"
+    >
+      No thanks
+    </button>
+  </div>
+
+  <!-- ── HISTORY PANEL ──────────────────────────── -->
+  <div class="history-backdrop" id="history-backdrop" onclick="toggleHistory()"></div>
+  <div class="history-panel" id="history-panel">
+    <div class="history-header">
+      <div class="history-title">Share History</div>
+      <button class="history-close" onclick="toggleHistory()">✕</button>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
 
   <!-- ══ SEND SCREEN ══════════════════════════════ -->
   <div class="screen" id="send-screen">
@@ -110,6 +134,23 @@
     <div class="progress-wrap" id="send-progress-wrap">
       <div class="progress-bar" id="send-progress-bar"></div>
     </div>
+    <!-- Expiry selector -->
+    <div style="margin-bottom:8px">
+      <label>Content expires after</label>
+      <div class="expiry-row">
+        <button class="expiry-btn" onclick="selectExpiry(5*60*1000, this)">5 min</button>
+        <button class="expiry-btn" onclick="selectExpiry(15*60*1000, this)">15 min</button>
+        <button class="expiry-btn" onclick="selectExpiry(30*60*1000, this)">30 min</button>
+        <button class="expiry-btn" onclick="selectExpiry(60*60*1000, this)">1 hour</button>
+      </div>
+    </div>
+
+    <!-- QR code for send code -->
+    <div class="qr-wrapper" id="send-qr-wrapper" style="display:none">
+      <div class="qr-label">Scan to receive</div>
+      <div class="qr-box" id="send-qr-box"></div>
+      <div class="qr-hint">Receiver scans this to auto-fill the code</div>
+    </div>
 
     <div class="status-pill" id="send-status"></div>
     <button class="btn btn-accent" onclick="sendContent()">Send It →</button>
@@ -137,6 +178,16 @@
         <button class="btn btn-success" style="margin-top:12px">⬇ Download File</button>
       </a>
       <button class="copy-btn" id="copy-btn" onclick="copyReceived()">Copy</button>
+    </div>
+
+    <!-- Expiry countdown shown to receiver -->
+    <div class="expiry-timer" id="expiry-timer">
+      <span class="dot"></span>Checking expiry...
+    </div>
+
+    <!-- Expired message -->
+    <div class="expiry-expired" id="expiry-expired">
+      ⏰ This share has expired and the content has been deleted.
     </div>
   </div>
 
@@ -178,6 +229,13 @@
                 onclick="sendRoomMsg('create')">Send</button>
       </div>
     </div>
+
+    <!-- QR code for room -->
+    <div class="qr-wrapper" id="room-qr-wrapper-create" style="display:none">
+      <div class="qr-label">Scan to join room</div>
+      <div class="qr-box" id="room-qr-box-create"></div>
+      <div class="qr-hint">Members scan this to join instantly</div>
+    </div>
   </div>
 
   <!-- ══ JOIN ROOM SCREEN ══════════════════════════ -->
@@ -217,56 +275,60 @@
                 onclick="sendRoomMsg('join')">Send</button>
       </div>
     </div>
+
+    <!-- QR code for joined room -->
+    <div class="qr-wrapper" id="room-qr-wrapper-join" style="display:none">
+      <div class="qr-label">Scan to join room</div>
+      <div class="qr-box" id="room-qr-box-join"></div>
+      <div class="qr-hint">Members scan this to join instantly</div>
+    </div>
   </div>
 
   <!-- ── SCRIPTS (order matters) ────────────────── -->
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- App scripts -->
   <script src="/socket.io/socket.io.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/theam.js"></script>
   <script src="js/app.js"></script>
-  <script src="js/theme.js"></script>
   <script src="js/clipboard.js"></script>
+  <script src="js/sync.js"></script>
   <script src="js/socket.js"></script>
   <script src="js/send.js"></script>
   <script src="js/receive.js"></script>
   <script src="js/room.js"></script>
-  <!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/expiry.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/notification.js"></script>
 
-<!-- Our scripts -->
-<script src="/socket.io/socket.io.js"></script>
-<script src="js/firebase.js"></script>
-<script src="js/app.js"></script>
-<script src="js/theme.js"></script>
-<script src="js/clipboard.js"></script>
-<script src="js/sync.js"></script>
-<script src="js/socket.js"></script>
-<script src="js/send.js"></script>
-<script src="js/receive.js"></script>
-<script src="js/room.js"></script>
-<script src="js/auth.js"></script>
-
-<script>
-  // Check if user is logged in or guest when main app loads
-  window.addEventListener('load', () => {
-    const isGuest = sessionStorage.getItem('shareamigo-guest');
-    if (isGuest) {
-      // Guest mode — skip auth check, show app directly
-      updateUserStatus(null);
-      return;
-    }
-    // Check Firebase session
-    auth.onAuthStateChanged((user) => {
-      if (!user) {
-        // Not logged in and not guest → send to login
-        window.location.href = 'login.html';
-      } else {
-        // Logged in → show status bar and start sync
-        updateUserStatus(user);
-        startClipboardSync(user.uid);
+  <script>
+    // Check if user is logged in or guest when main app loads
+    window.addEventListener('load', () => {
+      const isGuest = sessionStorage.getItem('shareamigo-guest');
+      if (isGuest) {
+        // Guest mode — skip auth check, show app directly
+        updateUserStatus(null);
+        return;
       }
+
+      // Check Firebase session
+      auth.onAuthStateChanged((user) => {
+        if (!user) {
+          // Not logged in and not guest -> send to login
+          window.location.href = 'login.html';
+        } else {
+          // Logged in -> show status bar and start sync
+          updateUserStatus(user);
+          startClipboardSync(user.uid);
+        }
+      });
     });
-  });
-</script>
+  </script>
 </body>
 </html>

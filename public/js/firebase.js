@@ -1,14 +1,13 @@
-// ── FIREBASE INIT ─────────────────────────────────────
-// We use the CDN version (no npm needed for frontend)
-// This file just initializes Firebase and exports the services
-// All other JS files use: auth, db from this file
+// ═══════════════════════════════════════════════════════
+//  js/firebase.js
+//  Initialize Firebase.
+//  Exposes auth and db globally for all other JS files.
+// ═══════════════════════════════════════════════════════
 
-// Wait for Firebase SDKs to load (they come from index/login HTML)
-// then expose auth and db globally
+// ── YOUR CONFIG ────────────────────────────────────────
+// Get this from Firebase Console
+// → Project Settings → Your Apps → SDK setup and configuration
 
-let auth, db;
-
-function initFirebase() {
   const firebaseConfig = {
     apiKey:            "AIzaSyBV5Km2vsFxD3rAYsQBXxI_XT-7JQ--AiM",
     authDomain:        "shareamigo-3fe59.firebaseapp.com",
@@ -18,14 +17,17 @@ function initFirebase() {
     appId:             "1:890515174763:web:bfcb6dfdd31c374a22c82e"
   };
 
-  // Initialize the Firebase app
-  const app = firebase.initializeApp(firebaseConfig);
+// Initialize
+firebase.initializeApp(firebaseConfig);
 
-  // Firebase Authentication — handles login/signup/google/logout
-  auth = firebase.auth();
+// Global references — used by auth.js, sync.js, history.js
+const auth = firebase.auth();
+const db   = firebase.firestore();
 
-  // Firestore — our real-time database for clipboard sync
-  db = firebase.firestore();
+// Persist login across browser sessions
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-  console.log('Firebase initialized ✅');
-}
+// Current logged-in user — set by auth.js onAuthStateChanged
+let currentUser = null;
+
+console.log('🔥 Firebase initialized');
