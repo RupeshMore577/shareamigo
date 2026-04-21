@@ -1,101 +1,209 @@
-// ── SHARE EXPIRY SYSTEM ───────────────────────────────
-// Sender picks a time limit → server auto-deletes after that
-// Receiver sees a live countdown timer
-// When expired → content is gone, receiver sees message
+/* ============================================
+   js/expiry.js
+   Share expiry system.
+   
+   How it works:
+   - User picks a duration (or none = no expiry)
+   - When content is sent, expiry time is included
+   - Server deletes content after that duration
+   - Countdown shows on sender's screen
+   - When content is fetched past expiry → "not found"
+   ============================================ */
 
-// Currently selected expiry in milliseconds (null = no expiry)
-let selectedExpiry = null;
+// ─── State ─────────────────────────────────
 
-// Holds the countdown interval so we can clear it
+// How long content lives (in milliseconds)
+// null = no expiry
+window.selectedExpiry = null;
+
+// Timer interval for the countdown display
 let countdownInterval = null;
 
-// ── EXPIRY BUTTON SELECTION ───────────────────────────
-// Called when user clicks 5m / 15m / 30m / 1h button
-function selectExpiry(ms, btn) {
-  selectedExpiry = ms;
+// When the content expires (absolute timestamp)
+let expiresAt = null;
 
-  // Remove selected class from all expiry buttons
-  document.querySelectorAll('.expiry-btn').forEach(b => {
-    b.classList.remove('selected');
+// ─── Expiry Options ─────────────────────────
+
+// Minutes → milliseconds
+const EXPIRY_OPTIONS = [
+  { label: '5 min',  ms: 5  * 60 * 1000 },
+  { label: '15 min', ms: 15 * 60 * 1000 },
+  { label: '30 min', ms: 30 * 60 * 1000 },
+  { label: '1 hr',   ms: 60 * 60 * 1000 },
+];
+
+// ─── Build the Expiry UI ────────────────────
+
+/*
+  Call this from send.js after the send screen appears.
+  It injects the expiry row below the send code box.
+  
+  targetElementId = the element to insert AFTER
+*/
+function buildExpiryPicker(targetElementId) {
+  // Don't build twice
+  if (document.getElementById('expiry-row')) return;
+
+  const target = document.getElementById(targetElementId);
+  if (!target) return;
+
+  // Build the row
+  const row = document.createElement('div');
+  row.className = 'expiry-row';
+  row.id = 'expiry-row';
+
+  // Label
+  const label = document.createElement('span');
+  label.className = 'expiry-label';
+  label.textContent = 'Expires in:';
+
+  // "None" button (default — no expiry)
+  const noneBtn = document.createElement('button');
+  noneBtn.className = 'expiry-btn active';   // active by default
+  noneBtn.textContent = 'Never';
+  noneBtn.dataset.ms = '0';
+  noneBtn.addEventListener('click', () => selectExpiry(0, noneBtn));
+
+  // Options container
+  const optionsDiv = document.createElement('div');
+  optionsDiv.className = 'expiry-options';
+  optionsDiv.appendChild(noneBtn);
+
+  // Build one button per option
+  EXPIRY_OPTIONS.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'expiry-btn';
+    btn.textContent = opt.label;
+    btn.dataset.ms = opt.ms;
+    btn.addEventListener('click', () => selectExpiry(opt.ms, btn));
+    optionsDiv.appendChild(btn);
   });
 
-  // Mark this button as selected
-  btn.classList.add('selected');
+  row.appendChild(label);
+  row.appendChild(optionsDiv);
+
+  // Insert AFTER the target element
+  target.parentNode.insertBefore(row, target.nextSibling);
+
+  // Countdown display — appears below picker
+  const countdown = document.createElement('div');
+  countdown.className = 'expiry-countdown';
+  countdown.id = 'expiry-countdown';
+  row.parentNode.insertBefore(countdown, row.nextSibling);
 }
 
-// ── FORMAT TIME ───────────────────────────────────────
-// Converts milliseconds to "4m 32s" format
-function formatCountdown(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes      = Math.floor(totalSeconds / 60);
-  const seconds      = totalSeconds % 60;
+// ─── Select an Expiry Duration ──────────────
 
-  if (minutes > 0) return `${minutes}m ${seconds}s`;
-  return `${seconds}s`;
+function selectExpiry(ms, clickedBtn) {
+  // Update which button looks active
+  document.querySelectorAll('.expiry-btn').forEach(b => {
+    b.classList.remove('active');
+  });
+  clickedBtn.classList.add('active');
+
+  // Store selection
+  // 0 means "Never" → set to null
+  window.selectedExpiry = ms === 0 ? null : ms;
+
+  // Stop any running countdown
+  stopCountdown();
+
+  // Clear the display
+  const countdownEl = document.getElementById('expiry-countdown');
+  if (countdownEl) countdownEl.textContent = '';
 }
 
-// ── START COUNTDOWN TIMER (shown to receiver) ─────────
-// Called when receiver gets content that has an expiry
-function startCountdown(expiresAt) {
-  const timerEl = document.getElementById('expiry-timer');
-  if (!timerEl) return;
+// ─── Start Countdown After Sending ─────────
 
-  timerEl.classList.add('show');
+/*
+  Called after content is successfully sent.
+  ms = how many milliseconds until expiry
+*/
+function startCountdown(ms) {
+  if (!ms) return;   // No expiry = nothing to count
 
-  // Clear any existing countdown
-  if (countdownInterval) clearInterval(countdownInterval);
+  // Calculate when it expires
+  expiresAt = Date.now() + ms;
 
-  countdownInterval = setInterval(() => {
-    const remaining = expiresAt - Date.now();
-
-    if (remaining <= 0) {
-      // Time is up — clear content
-      clearInterval(countdownInterval);
-      timerEl.classList.remove('show');
-      showExpired();
-      return;
-    }
-
-    timerEl.innerHTML =
-      `<span class="dot"></span>Expires in ${formatCountdown(remaining)}`;
-
-  }, 1000);
+  // Update immediately then every second
+  updateCountdownDisplay();
+  countdownInterval = setInterval(updateCountdownDisplay, 1000);
 }
 
-// ── SHOW EXPIRED MESSAGE ──────────────────────────────
-function showExpired() {
-  // Hide received content
-  const box = document.getElementById('received-box');
-  if (box) box.style.display = 'none';
+function updateCountdownDisplay() {
+  const countdownEl = document.getElementById('expiry-countdown');
+  if (!countdownEl) return;
 
-  // Show expired notice
-  const expired = document.getElementById('expiry-expired');
-  if (expired) expired.style.display = 'block';
+  const remaining = expiresAt - Date.now();
 
-  showToast('⏰ This share has expired', 'warning');
+  if (remaining <= 0) {
+    // Expired
+    stopCountdown();
+    countdownEl.textContent = 'Content has expired and been deleted.';
+    countdownEl.classList.add('urgent');
+    return;
+  }
+
+  // Format into hours / minutes / seconds
+  const totalSeconds = Math.ceil(remaining / 1000);
+  const hours   = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  let display = '';
+  if (hours > 0) {
+    display = `${hours}h ${minutes}m ${seconds}s remaining`;
+  } else if (minutes > 0) {
+    display = `${minutes}m ${seconds}s remaining`;
+  } else {
+    display = `${seconds}s remaining`;
+  }
+
+  countdownEl.textContent = display;
+
+  // Turn red when under 1 minute
+  if (totalSeconds <= 60) {
+    countdownEl.classList.add('urgent');
+  } else {
+    countdownEl.classList.remove('urgent');
+  }
 }
 
-// ── GET EXPIRY TIMESTAMP ──────────────────────────────
-// Returns Unix timestamp when content should expire
-// Returns null if no expiry selected
-function getExpiryTimestamp() {
-  if (!selectedExpiry) return null;
-  return Date.now() + selectedExpiry;
+function stopCountdown() {
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  expiresAt = null;
 }
 
-// ── CHECK IF CONTENT IS EXPIRED ───────────────────────
-// Called when receiver gets content
-// Returns true if expired, false if still valid
-function isExpired(expiresAt) {
-  if (!expiresAt) return false;  // no expiry = never expires
-  return Date.now() > expiresAt;
-}
+// ─── Reset (called when going back to home) ─
 
-// ── RESET EXPIRY STATE ────────────────────────────────
 function resetExpiry() {
-  selectedExpiry = null;
-  if (countdownInterval) clearInterval(countdownInterval);
-  document.querySelectorAll('.expiry-btn').forEach(b => {
-    b.classList.remove('selected');
-  });
+  stopCountdown();
+  window.selectedExpiry = null;
+
+  // Remove the UI elements from DOM
+  const row = document.getElementById('expiry-row');
+  if (row) row.remove();
+
+  const countdown = document.getElementById('expiry-countdown');
+  if (countdown) countdown.remove();
 }
+
+// ─── Server-side expiry handling ───────────
+/*
+  server.js will receive expiryMs in the share-content event.
+  It will use setTimeout to delete that code's content after that time.
+  
+  We don't need extra code here for that part — server handles it.
+  See the server.js update in Group 2.
+*/
+
+// ─── Expose globally ────────────────────────
+
+window.buildExpiryPicker = buildExpiryPicker;
+window.startCountdown    = startCountdown;
+window.stopCountdown     = stopCountdown;
+window.resetExpiry       = resetExpiry;
+window.selectExpiry      = selectExpiry;

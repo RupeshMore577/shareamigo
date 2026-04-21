@@ -1,65 +1,112 @@
-// ── THEME SYSTEM ──────────────────────────────────────
-// Handles dark / light / system modes
-// Saves preference to localStorage so it persists
+// ═══════════════════════════════════════════════════════
+//  js/theme.js  (was theam.js — rename the file)
+//  Handles dark / light / system theme toggle
+//
+//  ROOT CAUSE OF BUG:
+//  CSS uses [data-theme] on <html> element
+//  → must use document.documentElement.setAttribute
+//  → NOT document.body.setAttribute
+//  → NOT document.querySelector('html').className
+// ═══════════════════════════════════════════════════════
 
-function setTheme(mode) {
-  // Remove active from all buttons
-  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+// The <html> element — this is where data-theme lives
+const htmlEl = document.documentElement;
 
-  // Find the clicked button and mark it active
-  // We match by text content
-  document.querySelectorAll('.theme-btn').forEach(b => {
-    const label = b.textContent.trim().toLowerCase();
-    if (
-      (mode === 'light'  && label === 'light') ||
-      (mode === 'dark'   && label === 'dark')  ||
-      (mode === 'system' && label === 'auto')
-    ) {
-      b.classList.add('active');
-    }
-  });
+// Storage key
+const THEME_KEY = 'shareamigo-theme';
 
-  // Apply the theme to <html>
-  if (mode === 'system') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-  } else {
-    document.documentElement.setAttribute('data-theme', mode);
-  }
+// Holds the matchMedia listener so we can remove it later
+let systemThemeListener = null;
 
-  // Save for next visit
-  localStorage.setItem('shreamigo-theme', mode);
+// ── APPLY A THEME ──────────────────────────────────────
+// This is the ONE place that actually changes the theme.
+// Everything else calls this.
+function applyTheme(theme) {
+  // theme = 'dark' | 'light'
+  // This is what your CSS listens to:
+  //   [data-theme="light"] { ... }
+  htmlEl.setAttribute('data-theme', theme);
+  console.log('Theme applied:', theme);
 }
 
-// ── RESTORE THEME ON PAGE LOAD ────────────────────────
-(function restoreTheme() {
-  const saved = localStorage.getItem('shreamigo-theme') || 'dark';
+// ── SET THEME (called by buttons) ─────────────────────
+// mode = 'dark' | 'light' | 'system'
+function setTheme(mode) {
+  // Save preference
+  localStorage.setItem(THEME_KEY, mode);
 
-  // Apply theme to html element immediately
-  if (saved === 'system') {
+  // Remove any existing system listener
+  removeSystemListener();
+
+  if (mode === 'dark') {
+    applyTheme('dark');
+
+  } else if (mode === 'light') {
+    applyTheme('light');
+
+  } else if (mode === 'system') {
+    // Match OS preference right now
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-  } else {
-    document.documentElement.setAttribute('data-theme', saved);
+    applyTheme(prefersDark ? 'dark' : 'light');
+
+    // Watch for OS changes while in system mode
+    attachSystemListener();
   }
 
-  // Mark correct button as active
-  document.querySelectorAll('.theme-btn').forEach(b => {
-    b.classList.remove('active');
-    const label = b.textContent.trim().toLowerCase();
-    if (
-      (saved === 'light'  && label === 'light') ||
-      (saved === 'dark'   && label === 'dark')  ||
-      (saved === 'system' && label === 'auto')
-    ) {
-      b.classList.add('active');
+  // Update button active states
+  updateThemeButtons(mode);
+}
+
+// ── SYSTEM THEME LISTENER ──────────────────────────────
+function attachSystemListener() {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+  systemThemeListener = (e) => {
+    // Only fire if still in system mode
+    if (localStorage.getItem(THEME_KEY) === 'system') {
+      applyTheme(e.matches ? 'dark' : 'light');
     }
+  };
+
+  // Modern API
+  if (mq.addEventListener) {
+    mq.addEventListener('change', systemThemeListener);
+  } else {
+    // Safari fallback
+    mq.addListener(systemThemeListener);
+  }
+}
+
+function removeSystemListener() {
+  if (!systemThemeListener) return;
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.removeEventListener) {
+    mq.removeEventListener('change', systemThemeListener);
+  } else {
+    mq.removeListener(systemThemeListener);
+  }
+  systemThemeListener = null;
+}
+
+// ── UPDATE BUTTON STATES ───────────────────────────────
+function updateThemeButtons(activeMode) {
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.remove('active');
   });
 
-  // Watch for system theme changes when in auto mode
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-    if (localStorage.getItem('shreamigo-theme') === 'system') {
-      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+  // Buttons call setTheme('light'), setTheme('system'), setTheme('dark')
+  // Match by what's in their onclick attribute
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    const onclick = btn.getAttribute('onclick') || '';
+    if (onclick.includes(`'${activeMode}'`)) {
+      btn.classList.add('active');
     }
   });
+}
+
+// ── RESTORE ON PAGE LOAD ───────────────────────────────
+// Runs immediately when this script loads
+(function restoreTheme() {
+  const saved = localStorage.getItem(THEME_KEY) || 'dark';
+  setTheme(saved);
 })();

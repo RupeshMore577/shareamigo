@@ -1,113 +1,199 @@
-// ── SOCKET CONNECTION ─────────────────────────────────
-// This file creates the socket and handles ALL incoming
-// events from the server. Other files emit TO the server.
-// socket.js just LISTENS and routes responses correctly.
+// ═══════════════════════════════════════════════════════
+//  js/socket.js
+//  Creates socket connection.
+//  Listens to ALL server events and routes them.
+// ═══════════════════════════════════════════════════════
 
 const socket = io();
 
-// ── CONNECTION STATUS ─────────────────────────────────
+let lastSentPreview = '';
+
+// ── CONNECTION ─────────────────────────────────────────
+
 socket.on('connect', () => {
-  console.log('Connected to Shreamigo server:', socket.id);
+  console.log('✅ Socket connected:', socket.id);
 });
 
 socket.on('disconnect', () => {
-  console.log('Disconnected from server');
+  console.log('❌ Socket disconnected');
+  showStatus('send-status', 'error', 'Connection lost — please refresh');
 });
 
-// ── SEND CODE GENERATED ───────────────────────────────
-// Server gives us a unique send code
+socket.on('connect_error', (err) => {
+  console.error('Socket error:', err.message);
+});
+
+// ── SEND CODE GENERATED ────────────────────────────────
+
 socket.on('send-code-generated', (code) => {
   generatedSendCode = code;
-  document.getElementById('send-code-display').textContent = code;
+
+  const display = document.getElementById('send-code-display');
+  if (display) display.textContent = code;
+
+  // QR encodes a URL → receiver scans → receive screen opens
+  // with this code already filled in
+  showReceiveQR('send-qr-wrapper', 'send-qr-box', code);
 });
 
-// ── ROOM CODE GENERATED ───────────────────────────────
-// Server gives us a unique room code
+// ── ROOM CODE GENERATED ────────────────────────────────
+
 socket.on('room-code-generated', (code) => {
   generatedRoomCode = code;
-  document.getElementById('create-code-display').textContent = code;
-  // Enable the Create Room button now that we have a code
-  document.getElementById('create-room-btn').disabled = false;
+
+  const display = document.getElementById('create-code-display');
+  if (display) display.textContent = code;
+
+  const btn = document.getElementById('create-room-btn');
+  if (btn) btn.disabled = false;
+
+  // QR encodes a URL → member scans → join screen opens
+  // with this code already filled in
+  showJoinQR('room-qr-wrapper-create', 'room-qr-box-create', code);
 });
 
-// ── SHARE CONFIRMED ───────────────────────────────────
-// Server confirms our content was stored successfully
+// ── SHARE CONFIRMED ────────────────────────────────────
+
 socket.on('share-confirmed', (code) => {
-  // Complete the progress bar
   const pb = document.getElementById('send-progress-bar');
   const pw = document.getElementById('send-progress-wrap');
-  pb.style.width = '100%';
+
+  if (pb) pb.style.width = '100%';
+
   setTimeout(() => {
-    pw.classList.remove('show');
-    pb.style.width = '0%';
+    if (pw) pw.classList.remove('show');
+    if (pb) pb.style.width = '0%';
   }, 800);
-  showStatus('send-status', 'success', `Shared! Give code  ${code}  to the receiver`);
+
+  showStatus('send-status', 'success',
+    'Shared! Give code  ' + code + '  or let them scan the QR');
+
+  addToHistory('sent', code, lastSentPreview);
+  sendNotification('Content shared!', 'Code ' + code + ' is ready');
 });
 
-// ── CONTENT RECEIVED ──────────────────────────────────
-// Server returns the content for a given receive code
-socket.on('content-received', ({ type, data, name, size }) => {
+// ── CONTENT RECEIVED ───────────────────────────────────
+
+socket.on('content-received', ({ type, data, name, size, expiresAt }) => {
   hideStatus('receive-status');
+
   const box = document.getElementById('received-box');
-  box.style.display = 'block';
+  if (box) box.style.display = 'block';
+
+  const textEl  = document.getElementById('received-text');
+  const copyBtn = document.getElementById('copy-btn');
+  const dlLink  = document.getElementById('received-download');
 
   if (type === 'text') {
-    document.getElementById('received-text').textContent = data;
-    document.getElementById('copy-btn').style.display   = 'inline-block';
-    document.getElementById('received-download').style.display = 'none';
+    if (textEl)  textEl.textContent    = data;
+    if (copyBtn) copyBtn.style.display = 'inline-block';
+    if (dlLink)  dlLink.style.display  = 'none';
+
+    addToHistory('received', '', data.slice(0, 80));
+
   } else {
-    // File received — show name, size and download button
-    document.getElementById('received-text').innerHTML =
-      `<span style="font-weight:700">${getExt(name)}</span>
-       &nbsp;${name}
-       <br>
-       <span style="font-size:13px;color:var(--muted)">${size}</span>`;
-    document.getElementById('copy-btn').style.display = 'none';
-    const dl = document.getElementById('received-download');
-    dl.href     = data;
-    dl.download = name;
-    dl.style.display = 'block';
+    if (textEl) {
+      textEl.innerHTML =
+        '<span style="font-weight:700">' + getExt(name) + '</span>' +
+        '&nbsp;' + name +
+        '<br><span style="font-size:13px;color:var(--muted)">' + size + '</span>';
+    }
+
+    if (copyBtn) copyBtn.style.display = 'none';
+
+    if (dlLink) {
+      dlLink.href          = data;
+      dlLink.download      = name;
+      dlLink.style.display = 'block';
+    }
+
+    addToHistory('received', '', name);
   }
+
+  if (expiresAt) {
+    showExpiryTimer(expiresAt);
+  } else {
+    hideExpiryTimer();
+    hideExpiryExpired();
+  }
+
+  sendNotification(
+    'Content received!',
+    type === 'text' ? 'Text ready to copy' : 'File: ' + name
+  );
 });
 
-// ── CONTENT NOT FOUND ─────────────────────────────────
+// ── CONTENT NOT FOUND ──────────────────────────────────
+
 socket.on('content-not-found', () => {
-  showStatus('receive-status', 'error', 'Nothing found for this code');
+  showStatus('receive-status', 'error',
+    'Nothing found — check the code or content may have expired');
+
+  hideExpiryTimer();
+  hideExpiryExpired();
+
+  const box = document.getElementById('received-box');
+  if (box) box.style.display = 'none';
 });
 
-// ── ROOM CREATED ──────────────────────────────────────
+// ── CONTENT EXPIRED ────────────────────────────────────
+
+socket.on('content-expired', (code) => {
+  showStatus('send-status', 'error',
+    'Content on code ' + code + ' has expired and been deleted');
+  sendNotification('Share expired', 'Code ' + code + ' was deleted');
+});
+
+// ── ROOM CREATED ───────────────────────────────────────
+
 socket.on('room-created', (code) => {
   currentRoom     = code;
   currentRoomType = 'create';
+
   hideStatus('create-status');
-  document.getElementById('created-room-tag').textContent      = code;
-  document.getElementById('room-area-create').style.display    = 'block';
-  addMsg('create', 'Room created. Share code ' + code + ' with your group.', 'sys');
+
+  const tag  = document.getElementById('created-room-tag');
+  const area = document.getElementById('room-area-create');
+  if (tag)  tag.textContent    = code;
+  if (area) area.style.display = 'block';
+
+  addMsg('create', 'Room created. Share code ' + code +
+    ' or let members scan the QR.', 'sys');
 });
 
-// ── ROOM JOINED ───────────────────────────────────────
+// ── ROOM JOINED ────────────────────────────────────────
+
 socket.on('room-joined', (code) => {
   currentRoom     = code;
   currentRoomType = 'join';
+
   hideStatus('join-status');
-  document.getElementById('joined-room-tag').textContent    = code;
-  document.getElementById('room-area-join').style.display   = 'block';
+
+  const tag  = document.getElementById('joined-room-tag');
+  const area = document.getElementById('room-area-join');
+  if (tag)  tag.textContent    = code;
+  if (area) area.style.display = 'block';
+
   addMsg('join', 'You joined room ' + code, 'sys');
+
+  // Also show QR on join screen — so this member can share it
+  // with others who haven't joined yet
+  showJoinQR('room-qr-wrapper-join', 'room-qr-box-join', code);
 });
 
-// ── ROOM NOT FOUND ────────────────────────────────────
+// ── ROOM NOT FOUND ─────────────────────────────────────
+
 socket.on('room-not-found', () => {
   showStatus('join-status', 'error', 'Room not found — check the code');
 });
 
-// ── ROOM HISTORY ──────────────────────────────────────
-// Fired when a new user joins — sends all past messages
+// ── ROOM HISTORY ───────────────────────────────────────
+
 socket.on('room-history', (history) => {
   if (!history || history.length === 0) return;
 
   history.forEach(payload => {
     if (payload.type === 'text') {
-      // 'them' because history is other people's messages
       addMsg(currentRoomType, payload.message, 'them');
     } else {
       addFileMsg(currentRoomType, payload, 'them');
@@ -115,48 +201,61 @@ socket.on('room-history', (history) => {
   });
 });
 
-// ── ROOM MESSAGE RECEIVED ─────────────────────────────
-// Live message from another user in the room
+// ── LIVE ROOM MESSAGE ──────────────────────────────────
+
 socket.on('room-message-received', (payload) => {
   if (payload.type === 'text') {
     addMsg(currentRoomType, payload.message, 'them');
+    sendNotification('New message', payload.message.slice(0, 60));
   } else {
     addFileMsg(currentRoomType, payload, 'them');
+    sendNotification('File shared in room', payload.name);
   }
 });
 
-// ── ROOM MEMBER EVENTS ────────────────────────────────
+// ── ROOM MEMBER EVENTS ─────────────────────────────────
+
 socket.on('user-joined-room', () => {
   addMsg(currentRoomType, 'Someone joined the room 👋', 'sys');
+  sendNotification('Room', 'Someone joined the room');
 });
 
 socket.on('user-left-room', () => {
   addMsg(currentRoomType, 'Someone left the room', 'sys');
 });
 
-// ── ROOM MEMBER COUNT ─────────────────────────────────
+// ── MEMBER COUNT ───────────────────────────────────────
+
 socket.on('room-count', (count) => {
-  const label = count === 1 ? '1 member' : `${count} members`;
+  const label = count === 1 ? '1 member' : count + ' members';
+
   if (currentRoomType === 'create') {
-    document.getElementById('create-member-count').textContent = label;
+    const el = document.getElementById('create-member-count');
+    if (el) el.textContent = label;
   }
+
   if (currentRoomType === 'join') {
-    document.getElementById('join-member-count').textContent = label;
+    const el = document.getElementById('join-member-count');
+    if (el) el.textContent = label;
   }
 });
 
-// ── ROOM CLOSED (creator left) ────────────────────────
+// ── ROOM CLOSED ────────────────────────────────────────
+
 socket.on('room-closed', () => {
-  addMsg(currentRoomType, 'The room was closed by the creator.', 'sys');
-  // Disable input so no more messages can be sent
-  const msgInputId = currentRoomType === 'create'
-    ? 'create-msg-input'
-    : 'join-msg-input';
-  document.getElementById(msgInputId).disabled = true;
+  addMsg(currentRoomType, '⚠️ The room was closed by the creator.', 'sys');
+
+  const createInput = document.getElementById('create-msg-input');
+  const joinInput   = document.getElementById('join-msg-input');
+  if (createInput) createInput.disabled = true;
+  if (joinInput)   joinInput.disabled   = true;
+
+  sendNotification('Room closed', 'The room creator has left');
 });
 
-// ── SERVER ERROR ──────────────────────────────────────
+// ── SERVER ERROR ───────────────────────────────────────
+
 socket.on('error-msg', (msg) => {
   console.error('Server error:', msg);
-  alert('Error: ' + msg);
+  showStatus('send-status', 'error', msg);
 });

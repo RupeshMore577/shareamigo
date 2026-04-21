@@ -1,155 +1,252 @@
-// ── NOTIFICATION SYSTEM ───────────────────────────────
-// Two types:
-// 1. Toast — small popup inside the app (always works)
-// 2. Push  — browser notification (works in background,
-//            requires user permission)
+/* ============================================
+   js/notifications.js
+   
+   Two layers:
+   1. In-app toasts — always work, no permission needed
+      showToast(title, message, type, duration)
+      Types: 'info' | 'success' | 'warning' | 'error'
+   
+   2. Browser push notifications — only when tab is hidden
+      and user has granted permission
+      Shown via the Notifications API (no server needed)
+   ============================================ */
 
-// ── TOAST NOTIFICATIONS ───────────────────────────────
-// Small pill that slides up from bottom, auto-disappears
-// type: 'success' | 'info' | 'warning'
+// ─── Create Toast Container ─────────────────
 
-let toastTimeout = null;
-
-function showToast(message, type = 'info') {
-  let toast = document.getElementById('app-toast');
-
-  // Create toast element if it doesn't exist
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'app-toast';
-    toast.className = 'toast';
-    document.body.appendChild(toast);
+// Make sure the container exists in the DOM
+function ensureToastContainer() {
+  if (!document.getElementById('toast-container')) {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
   }
-
-  // Clear existing timeout
-  if (toastTimeout) clearTimeout(toastTimeout);
-
-  // Set content and type
-  toast.textContent = message;
-  toast.className   = `toast ${type}`;
-
-  // Show it
-  requestAnimationFrame(() => {
-    toast.classList.add('show');
-  });
-
-  // Auto-hide after 3 seconds
-  toastTimeout = setTimeout(() => {
-    toast.classList.remove('show');
-  }, 3000);
+  return document.getElementById('toast-container');
 }
 
-// ── PUSH NOTIFICATION PERMISSION ─────────────────────
-// Ask user for permission to send browser notifications
-async function requestNotifPermission() {
-  if (!('Notification' in window)) {
-    showToast('Your browser does not support notifications', 'warning');
-    return;
-  }
+// ─── Show In-App Toast ──────────────────────
 
-  if (Notification.permission === 'granted') {
-    showToast('Notifications already enabled ✅', 'success');
-    hideNotifBanner();
-    return;
-  }
+/*
+  title    = bold heading line
+  message  = smaller detail text
+  type     = 'info' | 'success' | 'warning' | 'error'
+  duration = milliseconds before auto-dismiss (default 4000)
+             pass 0 to keep it until manually closed
+*/
+function showToast(title, message = '', type = 'info', duration = 4000) {
+  const container = ensureToastContainer();
 
-  try {
-    const permission = await Notification.requestPermission();
+  // ── Icon per type ──
+  const icons = {
+    info:    'ℹ️',
+    success: '✅',
+    warning: '⚠️',
+    error:   '❌',
+  };
 
-    if (permission === 'granted') {
-      showToast('Notifications enabled ✅', 'success');
-      hideNotifBanner();
-      // Save preference
-      localStorage.setItem('shareamigo-notif', 'granted');
-    } else {
-      showToast('Notifications blocked — you can enable in browser settings', 'warning');
-    }
-  } catch(e) {
-    console.error('Notification permission error:', e);
-  }
-}
+  // ── Build toast element ──
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
 
-// ── SEND PUSH NOTIFICATION ────────────────────────────
-// Only fires if user has granted permission
-// Also falls back to toast if tab is visible
-function sendPushNotif(title, body, icon = '📤') {
-  // Always show toast regardless
-  showToast(`${icon} ${body}`, 'info');
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${escapeHtml(title)}</div>
+      ${message ? `<div class="toast-message">${escapeHtml(message)}</div>` : ''}
+    </div>
+    <button class="toast-close" title="Dismiss">✕</button>
+    ${duration > 0 ? '<div class="toast-progress"></div>' : ''}
+  `;
 
-  // Only send push if tab is hidden (user is on another tab)
-  if (document.visibilityState === 'visible') return;
+  container.appendChild(toast);
 
-  if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') return;
+  // ── Close button ──
+  const closeBtn = toast.querySelector('.toast-close');
+  closeBtn.addEventListener('click', () => dismissToast(toast));
 
-  try {
-    new Notification(title, {
-      body,
-      icon: '/icon.png',   // we'll add this later
-      badge: '/icon.png',
-      tag: 'shareamigo',   // replaces previous notif instead of stacking
+  // ── Progress bar animation ──
+  // We use a CSS transition so it's smooth
+  if (duration > 0) {
+    const bar = toast.querySelector('.toast-progress');
+    // Start at full width
+    bar.style.width = '100%';
+    bar.style.transitionDuration = duration + 'ms';
+
+    // Trigger shrink on next frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        bar.style.width = '0%';
+      });
     });
-  } catch(e) {
-    console.error('Push notif failed:', e);
+
+    // Auto-dismiss after duration
+    setTimeout(() => dismissToast(toast), duration);
+  }
+
+  // ── Limit to 5 toasts max ──
+  const allToasts = container.querySelectorAll('.toast:not(.hiding)');
+  if (allToasts.length > 5) {
+    dismissToast(allToasts[0]);
+  }
+
+  return toast;
+}
+
+// ─── Dismiss a Toast ────────────────────────
+
+function dismissToast(toast) {
+  if (!toast || toast.classList.contains('hiding')) return;
+
+  toast.classList.add('hiding');
+
+  // Remove after animation completes
+  setTimeout(() => {
+    toast.remove();
+  }, 350);
+}
+
+// ─── Browser Push Notifications ─────────────
+
+let pushPermission = Notification?.permission || 'default';
+
+/*
+  Ask the user for notification permission.
+  Call this on first meaningful action 
+  (don't ask on page load — bad UX).
+*/
+async function requestNotificationPermission() {
+  // Browser doesn't support it
+  if (!('Notification' in window)) return false;
+
+  // Already decided
+  if (pushPermission === 'granted')  return true;
+  if (pushPermission === 'denied')   return false;
+
+  // Ask
+  try {
+    const result = await Notification.requestPermission();
+    pushPermission = result;
+    return result === 'granted';
+  } catch (err) {
+    console.warn('Notification permission request failed:', err);
+    return false;
   }
 }
 
-// ── SPECIFIC NOTIFICATION TRIGGERS ───────────────────
+/*
+  Show a browser push notification.
+  Only fires when the tab is hidden (backgrounded).
+  Falls back to in-app toast if tab is visible.
+  
+  title   = notification heading
+  body    = detail text
+  type    = for the in-app fallback toast
+  icon    = optional emoji or URL for notification icon
+*/
+function showPushNotification(title, body = '', type = 'info') {
+  // If user can see the tab → use in-app toast
+  if (!document.hidden) {
+    showToast(title, body, type);
+    return;
+  }
+
+  // Tab is hidden → try browser notification
+  if (pushPermission === 'granted' && 'Notification' in window) {
+    try {
+      const note = new Notification(title, {
+        body: body,
+        icon: '/favicon.ico',  // add a favicon later
+        badge: '/favicon.ico',
+        tag: 'shareamigo',     // replaces previous notification of same tag
+        silent: false,
+      });
+
+      // Clicking notification brings tab to front
+      note.onclick = () => {
+        window.focus();
+        note.close();
+      };
+
+      // Auto-close after 6 seconds
+      setTimeout(() => note.close(), 6000);
+
+    } catch (err) {
+      // Fallback if something goes wrong
+      showToast(title, body, type);
+    }
+  } else {
+    // No permission → in-app toast anyway
+    showToast(title, body, type);
+  }
+}
+
+// ─── Pre-Built Notification Helpers ─────────
+// These are called from socket.js, sync.js, room.js
+
+// Someone shared content to a code you're watching
+function notifyContentReceived(preview) {
+  showPushNotification(
+    '📥 Content Received',
+    preview ? `"${truncate(preview, 50)}"` : 'New content is ready to view',
+    'success'
+  );
+}
 
 // Someone joined your room
-function notifUserJoined() {
-  sendPushNotif(
-    'Shareamigo — Someone joined!',
-    'A new member joined your room',
-    '👋'
+function notifyRoomJoin(name) {
+  showToast('👋 Someone Joined', `${name || 'A user'} joined the room`, 'info', 3000);
+}
+
+// Someone left your room
+function notifyRoomLeave(name) {
+  showToast('👋 Someone Left', `${name || 'A user'} left the room`, 'info', 2500);
+}
+
+// Cross-device clipboard sync arrived
+function notifyClipboardSync() {
+  showPushNotification(
+    '📋 Clipboard Synced',
+    'New content synced from another device',
+    'info'
   );
 }
 
-// Content was received (sender gets this)
-function notifContentReceived(code) {
-  sendPushNotif(
-    'Shareamigo — Content received!',
-    `Your share (code: ${code}) was picked up`,
-    '✅'
-  );
+// Content expired and was deleted
+function notifyExpired() {
+  showToast('⏰ Share Expired', 'Your shared content has been deleted', 'warning', 5000);
 }
 
-// Clipboard synced from another device
-function notifClipboardSynced() {
-  sendPushNotif(
-    'Shareamigo — Clipboard synced!',
-    'New clipboard content from your other device',
-    '📲'
-  );
+// Generic error
+function notifyError(message) {
+  showToast('Something went wrong', message, 'error', 5000);
 }
 
-// New room message when tab is hidden
-function notifRoomMessage(preview) {
-  sendPushNotif(
-    'Shareamigo — New message!',
-    preview.length > 50 ? preview.slice(0, 50) + '...' : preview,
-    '💬'
-  );
+// ─── Utility ────────────────────────────────
+
+// Prevent XSS in toast content
+function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
-// ── NOTIF BANNER (shown on first visit) ──────────────
-function showNotifBanner() {
-  // Don't show if already granted or denied
-  if (Notification.permission !== 'default') return;
-  if (localStorage.getItem('shareamigo-notif-dismissed')) return;
-
-  const banner = document.getElementById('notif-banner');
-  if (banner) banner.classList.add('show');
+function truncate(str, maxLen) {
+  if (!str) return '';
+  return str.length > maxLen ? str.slice(0, maxLen) + '...' : str;
 }
 
-function hideNotifBanner() {
-  const banner = document.getElementById('notif-banner');
-  if (banner) banner.classList.remove('show');
-  localStorage.setItem('shareamigo-notif-dismissed', 'true');
-}
+// ─── Expose globally ────────────────────────
 
-// ── AUTO-SHOW BANNER ON LOAD ──────────────────────────
-window.addEventListener('load', () => {
-  // Wait 3 seconds before asking — don't be annoying immediately
-  setTimeout(showNotifBanner, 3000);
-});
+window.showToast                     = showToast;
+window.showPushNotification          = showPushNotification;
+window.requestNotificationPermission = requestNotificationPermission;
+window.notifyContentReceived         = notifyContentReceived;
+window.notifyRoomJoin                = notifyRoomJoin;
+window.notifyRoomLeave               = notifyRoomLeave;
+window.notifyClipboardSync           = notifyClipboardSync;
+window.notifyExpired                 = notifyExpired;
+window.notifyError                   = notifyError;
+window.dismissToast                  = dismissToast;

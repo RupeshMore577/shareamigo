@@ -1,58 +1,105 @@
-// ── CLIPBOARD SYNC ────────────────────────────────────
-// Reads clipboard on load + when user clicks Sync button
-// Shows popup → user picks Simple Send or Send to Room
+// ═══════════════════════════════════════════════════════
+//  js/clipboard.js
+//  Local clipboard reading + popup handling
+//  For guests: reads local clipboard only
+//  For logged-in users: sync.js overrides checkClipboard
+//  to also push to Firestore
+// ═══════════════════════════════════════════════════════
+
+// ── READ CLIPBOARD ─────────────────────────────────────
+// Called by the "Sync Clipboard" button on landing page
+// For guests → shows local popup
+// For logged-in users → sync.js extends this behavior
 
 async function checkClipboard() {
   try {
     const text = await navigator.clipboard.readText();
+
     if (!text || !text.trim()) {
-      alert('Your clipboard is empty or has no text.');
+      // Nothing useful in clipboard
+      alert('Your clipboard is empty or contains no readable text.');
       return;
     }
-    showClipboardPopup(text.trim());
-  } catch(e) {
-    alert('Please allow clipboard access when your browser asks.');
+
+    const trimmed = text.trim();
+    clipboardContent = trimmed;
+
+    if (currentUser) {
+      // Logged in — push to Firestore (sync.js handles this)
+      await pushClipboardToSync(trimmed);
+      // Don't show local popup — other devices will get the Firestore popup
+      showStatus('send-status', 'success', 'Clipboard synced to all your devices!');
+    } else {
+      // Guest — just show local popup
+      showClipboardPopup(trimmed);
+    }
+
+  } catch (e) {
+    // Most common reason: permission denied
+    if (e.name === 'NotAllowedError') {
+      alert('Clipboard access was denied. Please allow it in your browser settings.');
+    } else {
+      alert('Could not read clipboard. Please copy your text first, then try again.');
+    }
+    console.warn('Clipboard read failed:', e);
   }
 }
+
+// ── SHOW CLIPBOARD POPUP ───────────────────────────────
 
 function showClipboardPopup(text) {
   clipboardContent = text;
-  document.getElementById('clipboard-preview-text').textContent = text;
-  document.getElementById('clipboard-popup').classList.add('show');
+
+  const previewEl = document.getElementById('clipboard-preview-text');
+  const titleEl   = document.getElementById('clipboard-popup-title');
+  const popupEl   = document.getElementById('clipboard-popup');
+
+  if (previewEl) previewEl.textContent = text;
+
+  // Default title (sync.js may override this for synced content)
+  if (titleEl) titleEl.textContent = '📋 Clipboard Detected!';
+
+  if (popupEl) popupEl.classList.add('show');
 }
 
-function closePopup() {
-  document.getElementById('clipboard-popup').classList.remove('show');
-}
+// ── CLIPBOARD TO SEND ──────────────────────────────────
+// Popup button: "Simple Send"
+// Fills the send screen textarea with clipboard text
 
-// User chose Simple Send → go to send screen with text pre-filled
 function clipboardToSend() {
   closePopup();
   showScreen('send-screen');
-  // Wait for screen to render then fill textarea
-  setTimeout(() => {
-    document.getElementById('send-text').value = clipboardContent;
-  }, 50);
+
+  // Wait a frame for screen transition
+  requestAnimationFrame(() => {
+    const textarea = document.getElementById('send-text');
+    if (textarea) {
+      textarea.value = clipboardContent;
+      textarea.focus();
+    }
+  });
 }
 
-// User chose Send to Room → go to create screen, prefill message
+// ── CLIPBOARD TO ROOM ──────────────────────────────────
+// Popup button: "Send to Room"
+// Fills the active room's message input
+
 function clipboardToRoom() {
   closePopup();
-  showScreen('create-screen');
-  setTimeout(() => {
-    document.getElementById('create-msg-input').value = clipboardContent;
-  }, 50);
-}
 
-// ── AUTO CHECK ON PAGE LOAD ───────────────────────────
-window.addEventListener('load', async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (text && text.trim().length > 0) {
-      showClipboardPopup(text.trim());
-    }
-  } catch(e) {
-    // Silently ignore — user hasn't granted permission yet
-    // They can always use the manual Sync Clipboard button
+  if (!currentRoom) {
+    // No active room — go to join screen
+    showScreen('join-screen');
+    return;
   }
-});
+
+  const inputId = currentRoomType === 'create'
+    ? 'create-msg-input'
+    : 'join-msg-input';
+
+  const input = document.getElementById(inputId);
+  if (input) {
+    input.value = clipboardContent;
+    input.focus();
+  }
+}

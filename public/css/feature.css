@@ -1,59 +1,79 @@
-/* ── QR CODE ─────────────────────────────────────────── */
+/* ============================================
+   css/features.css
+   Styles for: QR codes, expiry, history, 
+   notifications
+   ============================================ */
+
+/* ─── QR Code Box ─────────────────────────── */
+
 .qr-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  background: var(--surface2);
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.qr-box {
+  background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.3s ease;
+}
+
+.qr-box:hover {
+  box-shadow: 0 0 18px var(--accent-glow);
+}
+
+.qr-box canvas,
+.qr-box img {
+  border-radius: 6px;
+  display: block;
 }
 
 .qr-label {
   font-size: 11px;
-  letter-spacing: 2px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--muted);
-  font-style: italic;
 }
 
-.qr-box {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 12px;
-  display: inline-block;
-}
+/* ─── Expiry Picker ───────────────────────── */
 
-.qr-hint {
-  font-size: 12px;
-  color: var(--muted);
-  font-style: italic;
-  text-align: center;
-}
-
-/* ── EXPIRY SELECTOR ─────────────────────────────────── */
 .expiry-row {
   display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.expiry-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.expiry-options {
+  display: flex;
   gap: 8px;
-  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
 .expiry-btn {
-  flex: 1;
-  min-width: 70px;
-  padding: 8px 6px;
-  background: var(--surface2);
+  padding: 5px 12px;
+  border-radius: 20px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--muted);
-  font-family: 'EB Garamond', serif;
-  font-size: 14px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
+  transition: all 0.2s ease;
 }
 
 .expiry-btn:hover {
@@ -61,97 +81,102 @@
   color: var(--accent);
 }
 
-.expiry-btn.selected {
-  background: #00e5ff15;
+.expiry-btn.active {
+  background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 700;
+  color: #fff;
+  font-weight: 600;
 }
 
-/* Countdown timer shown to receiver */
-.expiry-timer {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 100px;
-  font-size: 13px;
-  margin-bottom: 16px;
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  background: #ff444410;
-  font-style: italic;
-  font-weight: 700;
-}
-
-.expiry-timer.show { display: inline-flex; }
-
-.expiry-expired {
-  display: none;
-  background: #ff444415;
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  border-radius: 10px;
-  padding: 16px;
+.expiry-countdown {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
   text-align: center;
-  font-size: 15px;
-  font-style: italic;
-  margin-top: 16px;
+  min-height: 18px;
+  transition: color 0.3s;
 }
 
-/* ── SHARE HISTORY ───────────────────────────────────── */
-.history-panel {
-  display: none;
+.expiry-countdown.urgent {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+/* ─── Share History Panel ─────────────────── */
+
+.history-btn {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 320px;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  z-index: 150;
-  flex-direction: column;
-  animation: slideInRight 0.3s ease;
-}
-
-.history-panel.show { display: flex; }
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
-}
-
-.history-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.history-title {
-  font-size: 20px;
-  font-weight: 700;
-  font-style: italic;
-  color: var(--text);
-}
-
-.history-close {
-  background: none;
+  bottom: 56px;           /* sits above the status bar */
+  right: 20px;
+  background: var(--card-bg);
   border: 1px solid var(--border);
-  color: var(--muted);
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+  z-index: 800;
 }
 
-.history-close:hover { border-color: var(--danger); color: var(--danger); }
+.history-btn:hover {
+  box-shadow: 0 0 16px var(--accent-glow);
+  transform: scale(1.08);
+}
+
+/* Panel that slides in from the right */
+.history-panel {
+  position: fixed;
+  top: 0;
+  right: -360px;          /* hidden off-screen */
+  width: 340px;
+  height: 100%;
+  background: var(--card-bg);
+  border-left: 1px solid var(--border);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.history-panel.open {
+  right: 0;
+}
+
+.history-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 18px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-panel-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.history-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.history-close-btn:hover {
+  color: var(--text);
+}
 
 .history-list {
   flex: 1;
@@ -159,163 +184,292 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.history-empty {
-  text-align: center;
-  color: var(--muted);
-  font-style: italic;
-  font-size: 14px;
-  margin-top: 40px;
-}
-
-.history-item {
-  background: var(--surface2);
+/* Individual history card */
+.history-card {
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   position: relative;
 }
 
-.history-item:hover {
+.history-card:hover {
   border-color: var(--accent);
-  transform: translateX(-2px);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
-.history-item-type {
-  font-size: 11px;
-  letter-spacing: 2px;
+.history-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.history-card-type {
+  font-size: 10px;
   text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 4px;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
 }
 
-.history-item-preview {
-  font-size: 14px;
-  color: var(--text);
+/* Sent = blue tint, Received = green tint */
+.history-card-type.sent {
+  background: rgba(99, 179, 237, 0.15);
+  color: #63b3ed;
+}
+
+.history-card-type.received {
+  background: rgba(72, 187, 120, 0.15);
+  color: #48bb78;
+}
+
+.history-card-time {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.history-card-preview {
+  font-size: 13px;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 4px;
+  max-width: 100%;
 }
 
-.history-item-time {
+.history-card-code {
   font-size: 11px;
-  color: var(--muted);
-  font-style: italic;
-}
-
-.history-item-resend {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: 'EB Garamond', serif;
-  transition: all 0.2s;
-}
-
-.history-item-resend:hover {
-  border-color: var(--accent);
   color: var(--accent);
+  margin-top: 4px;
+  font-family: monospace;
+  letter-spacing: 0.05em;
 }
 
-/* History toggle button in status bar */
-.history-toggle-btn {
-  background: none;
+.history-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 40px 20px;
+  line-height: 1.6;
+}
+
+.history-clear-btn {
+  margin: 12px;
+  padding: 10px;
+  border-radius: 8px;
   border: 1px solid var(--border);
-  color: var(--muted);
-  font-family: 'EB Garamond', serif;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font);
   font-size: 13px;
-  padding: 4px 12px;
-  border-radius: 100px;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: center;
 }
 
-.history-toggle-btn:hover {
-  border-color: var(--accent3);
-  color: var(--accent3);
+.history-clear-btn:hover {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
 }
 
-/* History overlay backdrop */
+/* Backdrop when panel is open */
 .history-backdrop {
   display: none;
   position: fixed;
   inset: 0;
-  background: #00000055;
-  z-index: 140;
+  background: rgba(0,0,0,0.45);
+  z-index: 890;
 }
 
-.history-backdrop.show { display: block; }
+.history-backdrop.show {
+  display: block;
+}
 
-/* ── NOTIFICATIONS ───────────────────────────────────── */
-/* In-app toast notification */
-.toast {
+/* ─── Notification Toast ──────────────────── */
+
+/* Container sits top-right, stacks multiple */
+#toast-container {
   position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  padding: 10px 20px;
-  font-size: 14px;
-  color: var(--text);
-  z-index: 300;
-  opacity: 0;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  pointer-events: none;
-  font-style: italic;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 300px;
+  pointer-events: none;   /* clicks pass through gaps */
 }
 
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.toast.success { border-color: var(--success); color: var(--success); }
-.toast.info    { border-color: var(--accent);  color: var(--accent);  }
-.toast.warning { border-color: var(--accent2); color: var(--accent2); }
-
-/* Notification permission banner */
-.notif-banner {
-  display: none;
-  background: var(--surface2);
+.toast {
+  background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  font-size: 14px;
-  color: var(--muted);
-  font-style: italic;
-  align-items: center;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  pointer-events: all;
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
+  animation: toastIn 0.35s ease forwards;
+  position: relative;
+  overflow: hidden;
 }
 
-.notif-banner.show { display: flex; }
+.toast.hiding {
+  animation: toastOut 0.3s ease forwards;
+}
 
-.notif-banner-btn {
-  background: var(--accent);
-  border: none;
-  color: #000;
-  font-family: 'EB Garamond', serif;
-  font-size: 13px;
-  font-weight: 700;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 120px;
+    margin-bottom: 0;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+    max-height: 0;
+    margin-bottom: -10px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+/* Colored left border per type */
+.toast::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 12px 0 0 12px;
+}
+
+.toast.info::before    { background: #63b3ed; }
+.toast.success::before { background: #48bb78; }
+.toast.warning::before { background: #f6ad55; }
+.toast.error::before   { background: #ff6b6b; }
+
+.toast-icon {
+  font-size: 18px;
+  line-height: 1;
   flex-shrink: 0;
-  transition: all 0.2s;
+  margin-top: 1px;
 }
 
-.notif-banner-btn:hover { opacity: 0.85; }
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.toast-message {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.toast-close:hover {
+  color: var(--text);
+}
+
+/* Progress bar that shrinks as toast expires */
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 12px 12px;
+  transition: width linear;
+}
+
+/* ─── Light mode overrides ────────────────── */
+
+body.light .qr-box {
+  background: #fff;
+  border-color: #ddd;
+}
+
+body.light .history-panel {
+  background: #fff;
+  border-color: #ddd;
+}
+
+body.light .history-card {
+  background: #f8f8f8;
+  border-color: #e0e0e0;
+}
+
+body.light .history-clear-btn {
+  border-color: #ccc;
+}
+
+body.light .toast {
+  background: #fff;
+  border-color: #ddd;
+}
+
+/* ─── Mobile adjustments ──────────────────── */
+
+@media (max-width: 480px) {
+  .history-panel {
+    width: 100%;
+    right: -100%;
+  }
+
+  #toast-container {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    top: 12px;
+  }
+
+  .expiry-options {
+    gap: 6px;
+  }
+
+  .expiry-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+}

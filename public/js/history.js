@@ -251,4 +251,145 @@ function openHistoryPanel() {
   panel.classList.add('open');
   if (backdrop) backdrop.classList.add('show');
 
-  // Load fresh data every time 
+  // Load fresh data every time it opens
+  loadHistory();
+}
+
+function closeHistoryPanel() {
+  const panel    = document.getElementById('history-panel');
+  const backdrop = document.getElementById('history-backdrop');
+
+  if (panel)    panel.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('show');
+}
+
+// ─── Build the history panel HTML ───────────
+
+/*
+  Called once on page load.
+  Injects the panel and the floating button into the body.
+  Only shown when user is logged in (checked in auth.js).
+*/
+function buildHistoryPanel() {
+  // Don't build twice
+  if (document.getElementById('history-panel')) return;
+
+  // ── Floating button ──
+  const btn = document.createElement('button');
+  btn.id = 'history-open-btn';
+  btn.className = 'history-btn';
+  btn.title = 'Share History';
+  btn.innerHTML = '🕘';
+  btn.setAttribute('aria-label', 'Open share history');
+  btn.addEventListener('click', openHistoryPanel);
+
+  // ── Backdrop ──
+  const backdrop = document.createElement('div');
+  backdrop.id = 'history-backdrop';
+  backdrop.className = 'history-backdrop';
+  backdrop.addEventListener('click', closeHistoryPanel);
+
+  // ── Panel ──
+  const panel = document.createElement('div');
+  panel.id = 'history-panel';
+  panel.className = 'history-panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'Share history');
+
+  panel.innerHTML = `
+    <div class="history-panel-header">
+      <h3>Share History</h3>
+      <button class="history-close-btn" 
+              id="history-close-btn" 
+              title="Close"
+              aria-label="Close history panel">✕</button>
+    </div>
+    <div class="history-list" id="history-list">
+      <div class="history-empty">
+        No history yet.<br>
+        Send or receive something to see it here.
+      </div>
+    </div>
+    <button class="history-clear-btn" id="history-clear-btn">
+      🗑️ Clear All History
+    </button>
+  `;
+
+  document.body.appendChild(backdrop);
+  document.body.appendChild(panel);
+  document.body.appendChild(btn);
+
+  // Wire up close button
+  document.getElementById('history-close-btn')
+    .addEventListener('click', closeHistoryPanel);
+
+  // Wire up clear button
+  document.getElementById('history-clear-btn')
+    .addEventListener('click', clearHistory);
+}
+
+// ─── Show / hide the history button ─────────
+// Called from auth.js when login state changes
+
+function showHistoryButton() {
+  const btn = document.getElementById('history-open-btn');
+  if (btn) btn.style.display = 'flex';
+}
+
+function hideHistoryButton() {
+  const btn = document.getElementById('history-open-btn');
+  if (btn) btn.style.display = 'none';
+  closeHistoryPanel();
+}
+
+// ─── Utilities ──────────────────────────────
+
+function formatHistoryTime(timestamp) {
+  if (!timestamp) return 'Just now';
+
+  // Firestore timestamps have .toDate()
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const now  = new Date();
+  const diffMs = now - date;
+
+  const diffMins  = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays  = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1)   return 'Just now';
+  if (diffMins < 60)  return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7)   return `${diffDays}d ago`;
+
+  // Older than a week → show actual date
+  return date.toLocaleDateString();
+}
+
+function truncateText(str, maxLen) {
+  if (!str) return '';
+  return str.length > maxLen ? str.slice(0, maxLen) + '...' : str;
+}
+
+// escapeHtml is already in notifications.js
+// If loaded before this file, use it — otherwise define fallback
+if (typeof escapeHtml === 'undefined') {
+  window.escapeHtml = function(str) {
+    if (typeof str !== 'string') return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  };
+}
+
+// ─── Expose globally ────────────────────────
+
+window.addHistoryEntry  = addHistoryEntry;
+window.loadHistory      = loadHistory;
+window.clearHistory     = clearHistory;
+window.openHistoryPanel = openHistoryPanel;
+window.closeHistoryPanel = closeHistoryPanel;
+window.buildHistoryPanel = buildHistoryPanel;
+window.showHistoryButton = showHistoryButton;
+window.hideHistoryButton = hideHistoryButton;

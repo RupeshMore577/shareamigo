@@ -1,117 +1,287 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
+/* ============================================================
+   server.js
+   Shareamigo — Main server
+   
+   Handles:
+   - Static file serving
+   - Unique code generation (send codes + room codes)
+   - Real-time send/receive via Socket.io
+   - Room create/join/message/file/disconnect
+   - Share expiry — auto-deletes after timer, notifies sender
+   ============================================================ */
 
-const app = express();
+'use strict';
+
+const express = require('express');
+const http    = require('http');
+const { Server } = require('socket.io');
+const crypto  = require('crypto');
+const path    = require('path');
+
+const app    = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  maxHttpBufferSize: 100 * 1024 * 1024  // 100MB for file transfers
+  // 100 MB max per message — covers large file transfers
+  maxHttpBufferSize: 100 * 1024 * 1024,
+
+  // Keep alive settings — helps on free hosting platforms
+  pingTimeout:  60000,
+  pingInterval: 25000,
 });
 
-app.use(express.static('public'));
+// ── STATIC FILES ─────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ── CODE GENERATOR ────────────────────────────────────
-// Characters used: A-Z + a-z + 0-9 = 62 chars
-// At length 8: 62^8 = 218 TRILLION combinations
-// Even with 1 billion users, collision chance is near zero
-const CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+// Health check endpoint — useful for uptime monitors
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// ── CODE GENERATOR ───────────────────────────────────────────
+/*
+  Characters: A-Z + a-z + 0-9 = 62 chars
+  Length: 8
+  Combinations: 62^8 = 218 trillion
+  
+  Uses crypto.randomBytes for true randomness.
+  Tracks ALL used codes forever — zero repeats.
+*/
+
+const CODE_CHARS  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const CODE_LENGTH = 8;
 
-// Tracks ALL codes ever generated — prevents any repeat forever
+// Separate sets — send codes and room codes never collide
 const usedSendCodes = new Set();
 const usedRoomCodes = new Set();
 
 function generateCode(usedSet) {
   let code;
   let attempts = 0;
+  const maxAttempts = 10000;
+
   do {
+    // crypto.randomBytes gives true randomness unlike Math.random()
+    const bytes = crypto.randomBytes(CODE_LENGTH);
     code = '';
     for (let i = 0; i < CODE_LENGTH; i++) {
-      // Pick a random character from CODE_CHARS
-      code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+      // Modulo maps 0-255 to 0-61 (slight bias but negligible at 62 chars)
+      code += CODE_CHARS[bytes[i] % CODE_CHARS.length];
     }
     attempts++;
-    // Safety valve — should never realistically hit this
-    if (attempts > 10000) throw new Error('Code space exhausted');
+    if (attempts >= maxAttempts) {
+      throw new Error('Code space exhausted — this should never happen');
+    }
   } while (usedSet.has(code));
 
-  // Lock this code permanently
   usedSet.add(code);
   return code;
 }
 
-// ── STORAGE ───────────────────────────────────────────
-// Latest share per send-code
+// ── IN-MEMORY STORAGE ────────────────────────────────────────
+/*
+  latestShare structure:
+  {
+    [code]: {
+      type:        'text' | 'file'
+      data:        string (text content or base64 data URL)
+      name:        string (filename, empty for text)
+      size:        string (formatted size, empty for text)
+      expiresAt:   number | null (Date.now() + ms, or null)
+      expiryTimer: NodeJS.Timeout | null (the setTimeout handle)
+      senderSocketId: string
+    }
+  }
+*/
 const latestShare = {};
 
-// Room storage: { roomCode: { creator, members: Set, history: [] } }
+/*
+  rooms structure:
+  {
+    [roomCode]: {
+      creator:  string (socket.id of creator)
+      members:  Set<string> (socket.ids of all current members)
+      history:  Array (all messages/files — max 200)
+    }
+  }
+*/
 const rooms = {};
 
-// ── CONNECTIONS ───────────────────────────────────────
-io.on('connection', (socket) => {
-  console.log('Connected:', socket.id);
+// ── HELPER — delete a share and notify sender ────────────────
+function expireShare(code) {
+  const share = latestShare[code];
+  if (!share) return;
 
-  // ── GENERATE SEND CODE ──────────────────────────────
-  // Called when user opens Send screen
+  // Clear the timer reference
+  if (share.expiryTimer) {
+    clearTimeout(share.expiryTimer);
+    share.expiryTimer = null;
+  }
+
+  // Delete the content
+  delete latestShare[code];
+  console.log(`⏰  Share expired: ${code}`);
+
+  // Notify the sender if they are still connected
+  const senderSocket = io.sockets.sockets.get(share.senderSocketId);
+  if (senderSocket) {
+    senderSocket.emit('share-expired', { code });
+  }
+}
+
+// ── SOCKET.IO ────────────────────────────────────────────────
+io.on('connection', (socket) => {
+  console.log(`✅  Connected:    ${socket.id}`);
+
+  // Per-socket state
+  socket.currentRoom = null;
+  socket.isCreator   = false;
+
+  // ── REQUEST SEND CODE ───────────────────────────────────
   socket.on('request-send-code', () => {
     try {
       const code = generateCode(usedSendCodes);
       socket.emit('send-code-generated', code);
-    } catch(e) {
-      socket.emit('error-msg', 'Could not generate code. Try again.');
+    } catch (err) {
+      console.error('Code generation failed:', err);
+      socket.emit('server-error', { message: 'Could not generate code. Refresh and try again.' });
     }
   });
 
-  // ── GENERATE ROOM CODE ──────────────────────────────
+  // ── REQUEST ROOM CODE ───────────────────────────────────
   socket.on('request-room-code', () => {
     try {
       const code = generateCode(usedRoomCodes);
       socket.emit('room-code-generated', code);
-    } catch(e) {
-      socket.emit('error-msg', 'Could not generate code. Try again.');
+    } catch (err) {
+      console.error('Room code generation failed:', err);
+      socket.emit('server-error', { message: 'Could not generate room code. Refresh and try again.' });
     }
   });
 
-  // ── SIMPLE SEND ─────────────────────────────────────
-  socket.on('share-content', ({ code, type, data, name, size }) => {
-    // Store content against this send code
-    latestShare[code] = { type, data, name, size };
-    console.log(`Shared on code ${code} | type: ${type}`);
-    socket.emit('share-confirmed', code);
-  });
-
-  // ── SIMPLE RECEIVE ──────────────────────────────────
-  socket.on('get-content', (code) => {
-    if (latestShare[code]) {
-      socket.emit('content-received', latestShare[code]);
-    } else {
-      socket.emit('content-not-found');
+  // ── SHARE CONTENT ───────────────────────────────────────
+  /*
+    Expected payload:
+    {
+      code:      string   — the send code
+      type:      string   — 'text' | 'file'
+      data:      string   — content or base64 data URL
+      name:      string   — filename (empty for text)
+      size:      string   — formatted size (empty for text)
+      expiresIn: number|null — milliseconds until expiry, or null
     }
-  });
+  */
+  socket.on('share-content', (payload) => {
+    const { code, type, data, name, size, expiresIn } = payload;
 
-  // ── CREATE ROOM ─────────────────────────────────────
-  socket.on('create-room', (roomCode) => {
-    // Initialize room with creator info and empty history
-    rooms[roomCode] = {
-      creator: socket.id,   // only creator leaving wipes history
-      members: new Set(),
-      history: []           // stores all messages/files
+    // Basic validation
+    if (!code || typeof code !== 'string' || code.length !== CODE_LENGTH) {
+      socket.emit('server-error', { message: 'Invalid share code.' });
+      return;
+    }
+    if (!data) {
+      socket.emit('server-error', { message: 'No content to share.' });
+      return;
+    }
+
+    // Cancel any existing content on this code
+    if (latestShare[code]?.expiryTimer) {
+      clearTimeout(latestShare[code].expiryTimer);
+    }
+
+    // Store the share
+    const expiresAt = (expiresIn && expiresIn > 0) ? Date.now() + expiresIn : null;
+
+    latestShare[code] = {
+      type:           type  || 'text',
+      data:           data,
+      name:           name  || '',
+      size:           size  || '',
+      expiresAt:      expiresAt,
+      expiryTimer:    null,
+      senderSocketId: socket.id,
     };
 
-    rooms[roomCode].members.add(socket.id);
-    socket.join(roomCode);
-    socket.currentRoom = roomCode;
-    socket.isCreator = true;
+    // Schedule auto-deletion if expiry was set
+    if (expiresAt) {
+      latestShare[code].expiryTimer = setTimeout(
+        () => expireShare(code),
+        expiresIn
+      );
+    }
 
-    console.log(`Room created: ${roomCode} by ${socket.id}`);
-    socket.emit('room-created', roomCode);
-    broadcastCount(roomCode);
+    // Confirm to sender — send back the expiry timestamp so
+    // the client can show an accurate countdown
+    socket.emit('share-confirmed', {
+      code,
+      expiresAt: expiresAt,   // null or absolute timestamp
+    });
+
+    console.log(
+      `📤  Shared:       ${code}` +
+      (expiresAt ? `  (expires in ${Math.round(expiresIn / 1000)}s)` : '  (no expiry)')
+    );
   });
 
-  // ── JOIN ROOM ───────────────────────────────────────
+  // ── GET CONTENT ─────────────────────────────────────────
+  socket.on('get-content', (code) => {
+    if (!code || typeof code !== 'string') {
+      socket.emit('content-not-found', { reason: 'invalid-code' });
+      return;
+    }
+
+    const share = latestShare[code];
+
+    if (!share) {
+      socket.emit('content-not-found', { reason: 'not-found' });
+      return;
+    }
+
+    // Check expiry (belt-and-suspenders — timer should handle it,
+    // but cover the case where server just restarted)
+    if (share.expiresAt && Date.now() > share.expiresAt) {
+      expireShare(code);
+      socket.emit('content-not-found', { reason: 'expired' });
+      return;
+    }
+
+    // Send content to receiver
+    socket.emit('content-received', {
+      type:      share.type,
+      data:      share.data,
+      name:      share.name,
+      size:      share.size,
+      expiresAt: share.expiresAt,   // receiver can show countdown too
+    });
+
+    console.log(`📥  Retrieved:    ${code}`);
+  });
+
+  // ── CREATE ROOM ─────────────────────────────────────────
+  socket.on('create-room', (roomCode) => {
+    if (!roomCode || typeof roomCode !== 'string') {
+      socket.emit('server-error', { message: 'Invalid room code.' });
+      return;
+    }
+
+    // Initialise room
+    rooms[roomCode] = {
+      creator: socket.id,
+      members: new Set([socket.id]),
+      history: [],
+    };
+
+    socket.join(roomCode);
+    socket.currentRoom = roomCode;
+    socket.isCreator   = true;
+
+    socket.emit('room-created', roomCode);
+    broadcastCount(roomCode);
+
+    console.log(`🏠  Room created: ${roomCode}  by ${socket.id}`);
+  });
+
+  // ── JOIN ROOM ────────────────────────────────────────────
   socket.on('join-room', (roomCode) => {
-    if (!rooms[roomCode]) {
+    if (!roomCode || !rooms[roomCode]) {
       socket.emit('room-not-found');
       return;
     }
@@ -119,50 +289,66 @@ io.on('connection', (socket) => {
     rooms[roomCode].members.add(socket.id);
     socket.join(roomCode);
     socket.currentRoom = roomCode;
-    socket.isCreator = false;
+    socket.isCreator   = false;
 
-    console.log(`${socket.id} joined room: ${roomCode}`);
+    // Confirm join + send full history to new member
     socket.emit('room-joined', roomCode);
-
-    // Send full history to the new joiner immediately
-    // This is the fix for Bug 3 — new users see all past messages
     socket.emit('room-history', rooms[roomCode].history);
 
-    // Tell others someone joined
+    // Notify everyone else
     socket.to(roomCode).emit('user-joined-room');
     broadcastCount(roomCode);
+
+    console.log(`👤  Joined:       ${roomCode}  by ${socket.id}`);
   });
 
-  // ── ROOM TEXT MESSAGE ───────────────────────────────
+  // ── ROOM TEXT MESSAGE ────────────────────────────────────
   socket.on('room-message', ({ roomCode, message }) => {
-    if (!rooms[roomCode]) return;
+    if (!roomCode || !rooms[roomCode] || !message) return;
 
-    const payload = { type: 'text', message, side: 'them' };
+    // Sanitise length — prevent abuse
+    const safeMessage = String(message).slice(0, 5000);
 
-    // Save to history
+    const payload = {
+      type:    'text',
+      message: safeMessage,
+      side:    'them',
+    };
+
+    // Save to history (cap at 200)
     rooms[roomCode].history.push(payload);
+    if (rooms[roomCode].history.length > 200) {
+      rooms[roomCode].history.shift();
+    }
 
-    // Send to everyone else in the room
     socket.to(roomCode).emit('room-message-received', payload);
   });
 
-  // ── ROOM FILE ───────────────────────────────────────
+  // ── ROOM FILE ────────────────────────────────────────────
   socket.on('room-file', ({ roomCode, data, name, size, fileType }) => {
-    if (!rooms[roomCode]) return;
+    if (!roomCode || !rooms[roomCode] || !data) return;
 
-    const payload = { type: 'file', data, name, size, fileType, side: 'them' };
+    const payload = {
+      type:     'file',
+      data:     data,
+      name:     name     || 'file',
+      size:     size     || '',
+      fileType: fileType || 'FILE',
+      side:     'them',
+    };
 
-    // Save to history
     rooms[roomCode].history.push(payload);
+    if (rooms[roomCode].history.length > 200) {
+      rooms[roomCode].history.shift();
+    }
 
-    // Send to everyone else
     socket.to(roomCode).emit('room-message-received', payload);
-    console.log(`File in room ${roomCode}: ${name}`);
+    console.log(`📎  Room file:    ${roomCode}  "${name}"`);
   });
 
-  // ── DISCONNECT ──────────────────────────────────────
-  socket.on('disconnect', () => {
-    console.log('Disconnected:', socket.id);
+  // ── DISCONNECT ───────────────────────────────────────────
+  socket.on('disconnect', (reason) => {
+    console.log(`❌  Disconnected: ${socket.id}  (${reason})`);
 
     const roomCode = socket.currentRoom;
     if (!roomCode || !rooms[roomCode]) return;
@@ -170,27 +356,32 @@ io.on('connection', (socket) => {
     rooms[roomCode].members.delete(socket.id);
 
     if (socket.isCreator) {
-      // Creator left → wipe entire room and history
-      console.log(`Creator left. Room ${roomCode} wiped.`);
+      // Creator left — close room, notify everyone, clean up
+      console.log(`🗑️   Room closed:  ${roomCode}  (creator left)`);
       io.to(roomCode).emit('room-closed');
       delete rooms[roomCode];
+
     } else if (rooms[roomCode].members.size === 0) {
-      // Last person left
+      // Last person left — clean up silently
       delete rooms[roomCode];
-      console.log(`Room ${roomCode} empty, removed.`);
+      console.log(`🗑️   Room removed: ${roomCode}  (empty)`);
+
     } else {
-      // Normal member left
+      // Regular member left
       socket.to(roomCode).emit('user-left-room');
       broadcastCount(roomCode);
     }
   });
 
+  // ── HELPER ───────────────────────────────────────────────
   function broadcastCount(roomCode) {
     if (!rooms[roomCode]) return;
     io.to(roomCode).emit('room-count', rooms[roomCode].members.size);
   }
 });
 
-server.listen(3000, () => {
-  console.log('Shreamigo running at http://localhost:3000');
+// ── START ────────────────────────────────────────────────────
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`\n🚀  Shareamigo running on http://localhost:${PORT}\n`);
 });
