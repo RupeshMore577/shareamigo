@@ -1,44 +1,54 @@
-/* ── CSS VARIABLES ──────────────────────────────────────
-   All color tokens live here.
-   Changing theme = just swapping these values.
+/* ── CSS VARIABLES ─────────────────────────────────────
+   All color tokens. Adding missing ones that feature.css needs.
 ──────────────────────────────────────────────────────── */
 :root {
-  --bg:         #080808;
-  --surface:    #111111;
-  --surface2:   #181818;
-  --border:     #252525;
-  --accent:     #00e5ff;
-  --accent2:    #ff3cac;
-  --accent3:    #7b2fff;
-  --text:       #f0f0f0;
-  --muted:      #555555;
-  --success:    #00ff88;
-  --danger:     #ff4444;
-  --card-hover: #161616;
+  --bg:          #080808;
+  --surface:     #111111;
+  --surface2:    #181818;
+  --border:      #252525;
+  --accent:      #00e5ff;
+  --accent2:     #ff3cac;
+  --accent3:     #7b2fff;
+  --text:        #f0f0f0;
+  --muted:       #555555;
+  --success:     #00ff88;
+  --danger:      #ff4444;
+  --card-hover:  #161616;
+
+  /* These were missing — used in feature.css */
+  --card-bg:     #111111;
+  --text-muted:  #555555;
+  --accent-glow: rgba(0, 229, 255, 0.15);
+
+  --font: 'EB Garamond', Georgia, serif;
 }
 
-/* Light mode — all tokens flipped to light values */
+/* Light mode */
 [data-theme="light"] {
-  --bg:         #f5f4f0;
-  --surface:    #ffffff;
-  --surface2:   #f0eeea;
-  --border:     #e0ddd6;
-  --accent:     #0077cc;
-  --accent2:    #cc1a6b;
-  --accent3:    #5b1fcc;
-  --text:       #1a1a1a;
-  --muted:      #888888;
-  --success:    #009955;
-  --danger:     #cc2222;
-  --card-hover: #fafaf8;
+  --bg:          #f5f4f0;
+  --surface:     #ffffff;
+  --surface2:    #f0eeea;
+  --border:      #e0ddd6;
+  --accent:      #0077cc;
+  --accent2:     #cc1a6b;
+  --accent3:     #5b1fcc;
+  --text:        #1a1a1a;
+  --muted:       #888888;
+  --success:     #009955;
+  --danger:      #cc2222;
+  --card-hover:  #fafaf8;
+
+  --card-bg:     #ffffff;
+  --text-muted:  #888888;
+  --accent-glow: rgba(0, 119, 204, 0.12);
 }
 
-/* ── THEME TOGGLE BAR ────────────────────────────────── */
+/* ── THEME TOGGLE BAR ──────────────────────────────── */
 .theme-bar {
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 100;
+  z-index: 1000;
   display: flex;
   gap: 4px;
   background: var(--surface);
@@ -66,7 +76,7 @@
   font-weight: 700;
 }
 
-/* ── ANIMATIONS ──────────────────────────────────────── */
+/* ── ANIMATIONS ────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -86,7 +96,7 @@
   to { transform: translate(280px, 280px); }
 }
 
-/* ── SCROLLBAR ───────────────────────────────────────── */
+/* ── SCROLLBAR ─────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {

@@ -1,7 +1,10 @@
 // ═══════════════════════════════════════════════════════
 //  js/socket.js
-//  Creates socket connection.
-//  Listens to ALL server events and routes them.
+//  All server events fixed:
+//  - share-confirmed now handles object {code, expiresAt}
+//  - share-expired renamed to match server
+//  - addHistoryEntry used (not addToHistory)
+//  - showPushNotification used (not sendNotification)
 // ═══════════════════════════════════════════════════════
 
 const socket = io();
@@ -16,7 +19,6 @@ socket.on('connect', () => {
 
 socket.on('disconnect', () => {
   console.log('❌ Socket disconnected');
-  showStatus('send-status', 'error', 'Connection lost — please refresh');
 });
 
 socket.on('connect_error', (err) => {
@@ -31,8 +33,7 @@ socket.on('send-code-generated', (code) => {
   const display = document.getElementById('send-code-display');
   if (display) display.textContent = code;
 
-  // QR encodes a URL → receiver scans → receive screen opens
-  // with this code already filled in
+  // QR encodes full URL → phone scans → receive screen opens
   showReceiveQR('send-qr-wrapper', 'send-qr-box', code);
 });
 
@@ -47,29 +48,31 @@ socket.on('room-code-generated', (code) => {
   const btn = document.getElementById('create-room-btn');
   if (btn) btn.disabled = false;
 
-  // QR encodes a URL → member scans → join screen opens
-  // with this code already filled in
+  // QR encodes full URL → phone scans → join screen opens
   showJoinQR('room-qr-wrapper-create', 'room-qr-box-create', code);
 });
 
 // ── SHARE CONFIRMED ────────────────────────────────────
+// Server sends object: { code, expiresAt }
 
-socket.on('share-confirmed', (code) => {
+socket.on('share-confirmed', ({ code, expiresAt }) => {
   const pb = document.getElementById('send-progress-bar');
   const pw = document.getElementById('send-progress-wrap');
 
   if (pb) pb.style.width = '100%';
-
   setTimeout(() => {
     if (pw) pw.classList.remove('show');
     if (pb) pb.style.width = '0%';
   }, 800);
 
   showStatus('send-status', 'success',
-    'Shared! Give code  ' + code + '  or let them scan the QR');
+    'Shared! Code: ' + code + ' — or let them scan the QR');
 
-  addToHistory('sent', code, lastSentPreview);
-  sendNotification('Content shared!', 'Code ' + code + ' is ready');
+  // Save to history
+  addHistoryEntry('sent', lastSentPreview, code,
+    lastSentPreview.includes('.') ? 'file' : 'text');
+
+  showPushNotification('Content shared!', 'Code ' + code + ' is ready', 'success');
 });
 
 // ── CONTENT RECEIVED ───────────────────────────────────
@@ -89,27 +92,26 @@ socket.on('content-received', ({ type, data, name, size, expiresAt }) => {
     if (copyBtn) copyBtn.style.display = 'inline-block';
     if (dlLink)  dlLink.style.display  = 'none';
 
-    addToHistory('received', '', data.slice(0, 80));
+    addHistoryEntry('received', data.slice(0, 80), '', 'text');
 
   } else {
     if (textEl) {
       textEl.innerHTML =
         '<span style="font-weight:700">' + getExt(name) + '</span>' +
-        '&nbsp;' + name +
+        ' ' + name +
         '<br><span style="font-size:13px;color:var(--muted)">' + size + '</span>';
     }
-
     if (copyBtn) copyBtn.style.display = 'none';
-
     if (dlLink) {
       dlLink.href          = data;
       dlLink.download      = name;
       dlLink.style.display = 'block';
     }
 
-    addToHistory('received', '', name);
+    addHistoryEntry('received', name, '', 'file');
   }
 
+  // Show expiry countdown if content expires
   if (expiresAt) {
     showExpiryTimer(expiresAt);
   } else {
@@ -117,9 +119,10 @@ socket.on('content-received', ({ type, data, name, size, expiresAt }) => {
     hideExpiryExpired();
   }
 
-  sendNotification(
+  showPushNotification(
     'Content received!',
-    type === 'text' ? 'Text ready to copy' : 'File: ' + name
+    type === 'text' ? 'Text ready to copy' : 'File: ' + name,
+    'success'
   );
 });
 
@@ -128,20 +131,19 @@ socket.on('content-received', ({ type, data, name, size, expiresAt }) => {
 socket.on('content-not-found', () => {
   showStatus('receive-status', 'error',
     'Nothing found — check the code or content may have expired');
-
   hideExpiryTimer();
   hideExpiryExpired();
-
   const box = document.getElementById('received-box');
   if (box) box.style.display = 'none';
 });
 
-// ── CONTENT EXPIRED ────────────────────────────────────
+// ── SHARE EXPIRED (sender gets this) ──────────────────
+// Server emits 'share-expired' — matches server.js
 
-socket.on('content-expired', (code) => {
+socket.on('share-expired', ({ code }) => {
   showStatus('send-status', 'error',
-    'Content on code ' + code + ' has expired and been deleted');
-  sendNotification('Share expired', 'Code ' + code + ' was deleted');
+    'Your shared content on code ' + code + ' has expired and been deleted');
+  showPushNotification('Share expired', 'Code ' + code + ' was deleted', 'warning');
 });
 
 // ── ROOM CREATED ───────────────────────────────────────
@@ -149,7 +151,6 @@ socket.on('content-expired', (code) => {
 socket.on('room-created', (code) => {
   currentRoom     = code;
   currentRoomType = 'create';
-
   hideStatus('create-status');
 
   const tag  = document.getElementById('created-room-tag');
@@ -157,8 +158,7 @@ socket.on('room-created', (code) => {
   if (tag)  tag.textContent    = code;
   if (area) area.style.display = 'block';
 
-  addMsg('create', 'Room created. Share code ' + code +
-    ' or let members scan the QR.', 'sys');
+  addMsg('create', 'Room created. Share the code or QR with your group.', 'sys');
 });
 
 // ── ROOM JOINED ────────────────────────────────────────
@@ -166,7 +166,6 @@ socket.on('room-created', (code) => {
 socket.on('room-joined', (code) => {
   currentRoom     = code;
   currentRoomType = 'join';
-
   hideStatus('join-status');
 
   const tag  = document.getElementById('joined-room-tag');
@@ -176,8 +175,7 @@ socket.on('room-joined', (code) => {
 
   addMsg('join', 'You joined room ' + code, 'sys');
 
-  // Also show QR on join screen — so this member can share it
-  // with others who haven't joined yet
+  // Show QR so this member can also share the room with others
   showJoinQR('room-qr-wrapper-join', 'room-qr-box-join', code);
 });
 
@@ -190,8 +188,7 @@ socket.on('room-not-found', () => {
 // ── ROOM HISTORY ───────────────────────────────────────
 
 socket.on('room-history', (history) => {
-  if (!history || history.length === 0) return;
-
+  if (!history || !history.length) return;
   history.forEach(payload => {
     if (payload.type === 'text') {
       addMsg(currentRoomType, payload.message, 'them');
@@ -206,10 +203,10 @@ socket.on('room-history', (history) => {
 socket.on('room-message-received', (payload) => {
   if (payload.type === 'text') {
     addMsg(currentRoomType, payload.message, 'them');
-    sendNotification('New message', payload.message.slice(0, 60));
+    showPushNotification('New message', payload.message.slice(0, 60), 'info');
   } else {
     addFileMsg(currentRoomType, payload, 'them');
-    sendNotification('File shared in room', payload.name);
+    showPushNotification('File shared in room', payload.name, 'info');
   }
 });
 
@@ -217,7 +214,7 @@ socket.on('room-message-received', (payload) => {
 
 socket.on('user-joined-room', () => {
   addMsg(currentRoomType, 'Someone joined the room 👋', 'sys');
-  sendNotification('Room', 'Someone joined the room');
+  showPushNotification('Room', 'Someone joined the room', 'info');
 });
 
 socket.on('user-left-room', () => {
@@ -228,12 +225,10 @@ socket.on('user-left-room', () => {
 
 socket.on('room-count', (count) => {
   const label = count === 1 ? '1 member' : count + ' members';
-
   if (currentRoomType === 'create') {
     const el = document.getElementById('create-member-count');
     if (el) el.textContent = label;
   }
-
   if (currentRoomType === 'join') {
     const el = document.getElementById('join-member-count');
     if (el) el.textContent = label;
@@ -244,18 +239,16 @@ socket.on('room-count', (count) => {
 
 socket.on('room-closed', () => {
   addMsg(currentRoomType, '⚠️ The room was closed by the creator.', 'sys');
-
   const createInput = document.getElementById('create-msg-input');
   const joinInput   = document.getElementById('join-msg-input');
   if (createInput) createInput.disabled = true;
   if (joinInput)   joinInput.disabled   = true;
-
-  sendNotification('Room closed', 'The room creator has left');
+  showPushNotification('Room closed', 'The creator has left', 'warning');
 });
 
 // ── SERVER ERROR ───────────────────────────────────────
 
-socket.on('error-msg', (msg) => {
-  console.error('Server error:', msg);
-  showStatus('send-status', 'error', msg);
+socket.on('server-error', ({ message }) => {
+  console.error('Server error:', message);
+  showToast('Server error', message, 'error');
 });

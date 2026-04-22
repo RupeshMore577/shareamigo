@@ -2,16 +2,16 @@
   "name": "shareamigo",
   "version": "2.0.0",
   "description": "Real-time cross-device sharing — text, files, rooms",
-  "main": "server.js",
+  "main": "server/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev":   "npx nodemon server.js"
+    "start": "node server/server.js",
+    "dev": "npx nodemon server/server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2"
   },
   "engines": {
-    "node": ">=16"
+    "node": "18.x"
   }
 }

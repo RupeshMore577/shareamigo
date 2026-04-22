@@ -17,14 +17,14 @@
 </head>
 <body>
 
-  <!-- ── THEME TOGGLE ───────────────────────────── -->
+  <!-- THEME TOGGLE -->
   <div class="theme-bar">
     <button class="theme-btn" onclick="setTheme('light')">Light</button>
     <button class="theme-btn" onclick="setTheme('system')">Auto</button>
     <button class="theme-btn active" onclick="setTheme('dark')">Dark</button>
   </div>
 
-  <!-- ── CLIPBOARD POPUP ────────────────────────── -->
+  <!-- CLIPBOARD POPUP -->
   <div class="popup-overlay" id="clipboard-popup">
     <div class="popup">
       <div class="popup-title" id="clipboard-popup-title">📋 Clipboard Detected!</div>
@@ -38,7 +38,7 @@
     </div>
   </div>
 
-  <!-- ══ LANDING ══════════════════════════════════ -->
+  <!-- LANDING -->
   <div id="landing">
     <div class="logo">Shareamigo</div>
     <div class="tagline">Share anything · Instantly · Anywhere</div>
@@ -49,12 +49,12 @@
       <div class="card send" onclick="showScreen('send-screen')">
         <span class="card-icon">📤</span>
         <div class="card-title">Send</div>
-        <div class="card-desc">Share text or any file. Receiver uses the code to get it.</div>
+        <div class="card-desc">Share text or any file instantly with a secure code.</div>
       </div>
       <div class="card receive" onclick="showScreen('receive-screen')">
         <span class="card-icon">📥</span>
         <div class="card-title">Receive</div>
-        <div class="card-desc">Enter a code to instantly get what was shared.</div>
+        <div class="card-desc">Enter a code or scan QR to get shared content.</div>
       </div>
       <div class="card create" onclick="showScreen('create-screen')">
         <span class="card-icon">🏠</span>
@@ -64,12 +64,12 @@
       <div class="card joinr" onclick="showScreen('join-screen')">
         <span class="card-icon">🚪</span>
         <div class="card-title">Join Room</div>
-        <div class="card-desc">Enter a room code to join a live group chat.</div>
+        <div class="card-desc">Enter a room code or scan QR to join instantly.</div>
       </div>
     </div>
   </div>
 
-  <!-- ── USER STATUS BAR ────────────────────────── -->
+  <!-- USER STATUS BAR -->
   <div id="user-status-bar">
     <div class="sync-dot" id="sync-dot"></div>
     <div class="user-avatar" id="user-status-avatar">?</div>
@@ -84,17 +84,15 @@
     </button>
   </div>
 
-  <!-- ── NOTIFICATION BANNER ────────────────────── -->
+  <!-- NOTIFICATION BANNER -->
   <div class="notif-banner" id="notif-banner" style="display:none">
     <span>Enable notifications to know when someone joins or shares</span>
     <button class="notif-banner-btn" onclick="requestNotifPermission()">Enable</button>
     <button class="notif-banner-btn notif-banner-btn-ghost"
-            onclick="hideNotifBanner()">
-      No thanks
-    </button>
+            onclick="hideNotifBanner()">No thanks</button>
   </div>
 
-  <!-- ── HISTORY PANEL ──────────────────────────── -->
+  <!-- HISTORY PANEL -->
   <div class="history-backdrop" id="history-backdrop"
        onclick="toggleHistory()"></div>
   <div class="history-panel" id="history-panel">
@@ -109,36 +107,40 @@
     </div>
   </div>
 
-  <!-- ══ SEND SCREEN ══════════════════════════════ -->
+  <!-- ══ SEND SCREEN ══ -->
   <div class="screen" id="send-screen">
     <button class="back-btn" onclick="goHome()">← Back</button>
     <div class="screen-title" style="color:var(--accent)">📤 Send</div>
-    <div class="screen-sub">
-      Your private code is auto-generated — give it to the receiver
-    </div>
+    <div class="screen-sub">Your private code is auto-generated</div>
 
     <label>Your secure send code</label>
-    <div class="code-display" style="margin-bottom:20px">
+    <div class="code-display" style="margin-bottom:16px">
       <div class="big-code" id="send-code-display">—</div>
-      <button class="refresh-btn" title="Get new code" onclick="requestSendCode()">↻</button>
+      <button class="refresh-btn" title="Get new code"
+              onclick="requestSendCode()">↻</button>
     </div>
 
-    <!-- QR code for send code -->
+    <!-- QR for send code -->
     <div class="qr-wrapper" id="send-qr-wrapper" style="display:none">
       <div class="qr-label">Scan to receive</div>
       <div class="qr-box" id="send-qr-box"></div>
-      <div class="qr-hint">Receiver scans this to auto-fill the code</div>
+      <div class="qr-hint">Receiver scans this — code auto-fills on their device</div>
     </div>
 
-    <!-- Expiry selector -->
+    <!-- Expiry -->
     <div class="expiry-section">
       <label>Content expires after</label>
       <div class="expiry-row">
-        <button class="expiry-btn" onclick="selectExpiry(5*60*1000, this)">5 min</button>
-        <button class="expiry-btn" onclick="selectExpiry(15*60*1000, this)">15 min</button>
-        <button class="expiry-btn" onclick="selectExpiry(30*60*1000, this)">30 min</button>
-        <button class="expiry-btn" onclick="selectExpiry(60*60*1000, this)">1 hour</button>
-        <button class="expiry-btn active" onclick="selectExpiry(0, this)">Never</button>
+        <button class="expiry-btn active"
+                onclick="selectExpiry(0, this)">Never</button>
+        <button class="expiry-btn"
+                onclick="selectExpiry(300000, this)">5 min</button>
+        <button class="expiry-btn"
+                onclick="selectExpiry(900000, this)">15 min</button>
+        <button class="expiry-btn"
+                onclick="selectExpiry(1800000, this)">30 min</button>
+        <button class="expiry-btn"
+                onclick="selectExpiry(3600000, this)">1 hour</button>
       </div>
     </div>
 
@@ -172,36 +174,32 @@
     <button class="btn btn-accent" onclick="sendContent()">Send It →</button>
   </div>
 
-  <!-- ══ RECEIVE SCREEN ════════════════════════════ -->
+  <!-- ══ RECEIVE SCREEN ══ -->
   <div class="screen" id="receive-screen">
     <button class="back-btn" onclick="goHome()">← Back</button>
     <div class="screen-title" style="color:var(--success)">📥 Receive</div>
-    <div class="screen-sub">Enter the secure code the sender gave you</div>
+    <div class="screen-sub">Enter the code or scan the sender's QR</div>
 
     <div class="input-group">
       <label>Secure code</label>
-      <input
-        type="text"
-        class="code-field"
-        id="receive-code"
-        maxlength="8"
-        placeholder="e.g. aB3xYz9Q"
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="off"
-        spellcheck="false"
-      />
+      <input type="text" class="code-field" id="receive-code"
+             maxlength="8" placeholder="e.g. aB3xYz9Q"
+             autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false" />
     </div>
 
     <div class="status-pill" id="receive-status"></div>
-    <button class="btn btn-success" onclick="receiveContent()">Get Content →</button>
+    <button class="btn btn-success" onclick="receiveContent()">
+      Get Content →
+    </button>
 
-    <!-- Received content box — hidden until content arrives -->
     <div id="received-box" style="display:none">
       <h3>✓ Content Received</h3>
       <div id="received-text"></div>
       <a id="received-download" style="display:none">
-        <button class="btn btn-success" style="margin-top:12px">⬇ Download File</button>
+        <button class="btn btn-success" style="margin-top:12px">
+          ⬇ Download File
+        </button>
       </a>
       <button class="copy-btn" id="copy-btn"
               onclick="copyReceived()" style="display:none">
@@ -209,30 +207,29 @@
       </button>
     </div>
 
-    <!-- Expiry countdown shown to receiver -->
     <div class="expiry-timer" id="expiry-timer" style="display:none">
       <span class="dot"></span>Checking expiry...
     </div>
 
-    <!-- Shown when content has expired -->
     <div class="expiry-expired" id="expiry-expired" style="display:none">
       ⏰ This share has expired and the content has been deleted.
     </div>
   </div>
 
-  <!-- ══ CREATE ROOM SCREEN ════════════════════════ -->
+  <!-- ══ CREATE ROOM SCREEN ══ -->
   <div class="screen" id="create-screen">
     <button class="back-btn" onclick="goHome()">← Back</button>
     <div class="screen-title" style="color:var(--accent3)">🏠 Create Room</div>
-    <div class="screen-sub">A unique secure code is generated for your room</div>
+    <div class="screen-sub">A unique code is generated for your room</div>
 
     <label>Your room code</label>
-    <div class="code-display" style="margin-bottom:20px">
+    <div class="code-display" style="margin-bottom:16px">
       <div class="big-code" id="create-code-display">—</div>
-      <button class="refresh-btn" title="Get new code" onclick="requestRoomCode()">↻</button>
+      <button class="refresh-btn" title="Get new code"
+              onclick="requestRoomCode()">↻</button>
     </div>
 
-    <!-- QR code for room -->
+    <!-- QR for room -->
     <div class="qr-wrapper" id="room-qr-wrapper-create" style="display:none">
       <div class="qr-label">Scan to join room</div>
       <div class="qr-box" id="room-qr-box-create"></div>
@@ -269,25 +266,18 @@
     </div>
   </div>
 
-  <!-- ══ JOIN ROOM SCREEN ══════════════════════════ -->
+  <!-- ══ JOIN ROOM SCREEN ══ -->
   <div class="screen" id="join-screen">
     <button class="back-btn" onclick="goHome()">← Back</button>
     <div class="screen-title" style="color:var(--accent2)">🚪 Join Room</div>
-    <div class="screen-sub">Enter the secure room code to join</div>
+    <div class="screen-sub">Enter the room code or scan the QR</div>
 
     <div class="input-group">
       <label>Room code</label>
-      <input
-        type="text"
-        class="code-field"
-        id="join-code"
-        maxlength="8"
-        placeholder="e.g. aB3xYz9Q"
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="off"
-        spellcheck="false"
-      />
+      <input type="text" class="code-field" id="join-code"
+             maxlength="8" placeholder="e.g. aB3xYz9Q"
+             autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false" />
     </div>
 
     <div class="status-pill" id="join-status"></div>
@@ -316,33 +306,28 @@
       </div>
     </div>
 
-    <!-- QR for joined room — so they can share it with others -->
+    <!-- QR shown after joining so member can share room -->
     <div class="qr-wrapper" id="room-qr-wrapper-join" style="display:none">
       <div class="qr-label">Scan to join this room</div>
       <div class="qr-box" id="room-qr-box-join"></div>
-      <div class="qr-hint">Share this with others to invite them</div>
+      <div class="qr-hint">Share with others to invite them</div>
     </div>
   </div>
 
-  <!-- ── SCRIPTS — order matters ────────────────── -->
-
-  <!-- 1. Socket.io client -->
+  <!-- ── SCRIPTS ── order matters ── -->
   <script src="/socket.io/socket.io.js"></script>
 
-  <!-- 2. Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
-  <!-- 3. QR Code library from CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <!-- 4. App scripts — ORDER MATTERS -->
   <script src="js/firebase.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/notifications.js"></script>
   <script src="js/app.js"></script>
   <script src="js/qrcode-helper.js"></script>
-  <script src="js/notification.js"></script>
   <script src="js/clipboard.js"></script>
   <script src="js/sync.js"></script>
   <script src="js/history.js"></script>
@@ -351,33 +336,6 @@
   <script src="js/receive.js"></script>
   <script src="js/room.js"></script>
   <script src="js/auth.js"></script>
-
-  <!-- 5. Boot — runs after all scripts load -->
-  <script>
-    window.addEventListener('load', () => {
-      const isGuest = sessionStorage.getItem('shareamigo-guest');
-
-      if (isGuest) {
-        // Guest mode — show app without sync
-        updateUserStatus(null);
-        return;
-      }
-
-      // Check Firebase auth session
-      auth.onAuthStateChanged((user) => {
-        if (!user) {
-          // Not logged in and not guest — go to login
-          window.location.href = 'login.html';
-        } else {
-          // Logged in
-          updateUserStatus(user);
-          startClipboardSync(user.uid);
-          buildHistoryPanel();
-          maybeShowNotifBanner();
-        }
-      });
-    });
-  </script>
 
 </body>
 </html>

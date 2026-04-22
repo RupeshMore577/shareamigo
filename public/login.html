@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shareamigo — Login</title>
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
@@ -12,35 +15,33 @@
 </head>
 <body>
 
-  <!-- ── THEME TOGGLE ───────────────────────────── -->
+  <!-- Theme toggle works on login page too -->
   <div class="theme-bar">
     <button class="theme-btn" onclick="setTheme('light')">Light</button>
     <button class="theme-btn" onclick="setTheme('system')">Auto</button>
     <button class="theme-btn active" onclick="setTheme('dark')">Dark</button>
   </div>
 
-  <!-- ── LOGIN PAGE ─────────────────────────────── -->
-  <div id="login-page" style="display:flex">
+  <div id="login-page">
 
     <div class="auth-card">
 
-      <!-- Logo -->
       <div class="auth-logo">Shareamigo</div>
       <div class="auth-tagline">Share anything · Instantly · Anywhere</div>
 
-      <!-- Error + Loading -->
+      <!-- Messages -->
       <div id="auth-error"></div>
       <div id="auth-loading"></div>
 
-      <!-- ── LOGIN FORM ────────────────────────── -->
+      <!-- ── LOGIN FORM ── -->
       <div id="login-form">
         <div class="auth-title">Welcome back</div>
 
         <input class="auth-input" type="email"
-               id="auth-email" placeholder="Email address" />
+               id="login-email" placeholder="Email address" />
 
         <input class="auth-input" type="password"
-               id="auth-password" placeholder="Password" />
+               id="login-password" placeholder="Password" />
 
         <button class="auth-btn auth-btn-primary" onclick="login()">
           Sign In →
@@ -48,7 +49,6 @@
 
         <div class="auth-divider">or</div>
 
-        <!-- Google Sign In -->
         <button class="auth-btn auth-btn-google" onclick="loginWithGoogle()">
           <img class="google-icon"
                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
@@ -56,29 +56,27 @@
           Continue with Google
         </button>
 
-        <!-- Guest -->
         <button class="auth-btn auth-btn-guest" onclick="continueAsGuest()">
           Continue as Guest
         </button>
 
         <div class="auth-switch">
-          No account?
-          <span onclick="showSignup()">Create one</span>
+          No account? <span onclick="showSignup()">Create one</span>
         </div>
       </div>
 
-      <!-- ── SIGNUP FORM ───────────────────────── -->
+      <!-- ── SIGNUP FORM ── -->
       <div id="signup-form" style="display:none">
         <div class="auth-title">Create account</div>
 
         <input class="auth-input" type="text"
-               id="auth-name" placeholder="Your name" />
+               id="signup-name" placeholder="Your name" />
 
         <input class="auth-input" type="email"
-               id="auth-email-signup" placeholder="Email address" />
+               id="signup-email" placeholder="Email address" />
 
         <input class="auth-input" type="password"
-               id="auth-password-signup" placeholder="Password (min 6 chars)" />
+               id="signup-password" placeholder="Password (min 6 chars)" />
 
         <button class="auth-btn auth-btn-primary" onclick="signUp()">
           Create Account →
@@ -98,36 +96,21 @@
         </button>
 
         <div class="auth-switch">
-          Already have an account?
-          <span onclick="showLogin()">Sign in</span>
+          Already have an account? <span onclick="showLogin()">Sign in</span>
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- Firebase SDKs — must load before our JS -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
-  <script src="js/theme.js"></script>
   <script src="js/firebase.js"></script>
+  <script src="js/theme.js"></script>
   <script src="js/auth.js"></script>
-
-  <script>
-    // On login page — after successful login redirect to main app
-    function onUserLoggedIn(user) {
-      window.location.href = 'index.html';
-    }
-
-    // Guest skips login entirely
-    function continueAsGuest() {
-      // Store guest flag in session
-      sessionStorage.setItem('shareamigo-guest', 'true');
-      window.location.href = 'index.html';
-    }
-  </script>
 
 </body>
 </html>

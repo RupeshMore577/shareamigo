@@ -1,21 +1,14 @@
-/* ============================================
-   css/features.css
-   Styles for: QR codes, expiry, history, 
-   notifications
-   ============================================ */
-
-/* ─── QR Code Box ─────────────────────────── */
-
+/* ── QR WRAPPER ────────────────────────────────────── */
 .qr-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  margin-top: 14px;
+  margin: 16px 0;
 }
 
 .qr-box {
-  background: var(--card-bg);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
@@ -37,41 +30,39 @@
 
 .qr-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--muted);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-/* ─── Expiry Picker ───────────────────────── */
+.qr-hint {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* ── EXPIRY SECTION ────────────────────────────────── */
+.expiry-section {
+  margin-bottom: 16px;
+}
 
 .expiry-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.expiry-label {
-  font-size: 13px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.expiry-options {
-  display: flex;
   gap: 8px;
+  margin-top: 10px;
   flex-wrap: wrap;
 }
 
 .expiry-btn {
-  padding: 5px 12px;
+  padding: 5px 14px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: transparent;
-  color: var(--text-muted);
-  font-family: var(--font);
-  font-size: 12px;
+  color: var(--muted);
+  font-family: 'EB Garamond', serif;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -84,58 +75,57 @@
 .expiry-btn.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
-  font-weight: 600;
+  color: #000;
+  font-weight: 700;
 }
 
-.expiry-countdown {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 6px;
-  text-align: center;
-  min-height: 18px;
-  transition: color 0.3s;
-}
-
-.expiry-countdown.urgent {
-  color: #ff6b6b;
-  font-weight: 600;
-}
-
-/* ─── Share History Panel ─────────────────── */
-
-.history-btn {
-  position: fixed;
-  bottom: 56px;           /* sits above the status bar */
-  right: 20px;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  display: flex;
+/* ── EXPIRY TIMER (receive screen) ─────────────────── */
+.expiry-timer {
+  display: none;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 18px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  transition: all 0.2s ease;
-  z-index: 800;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  margin-top: 12px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.06);
+  font-style: italic;
 }
 
-.history-btn:hover {
-  box-shadow: 0 0 16px var(--accent-glow);
-  transform: scale(1.08);
+.expiry-expired {
+  display: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-top: 12px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  background: rgba(255, 68, 68, 0.06);
+  font-style: italic;
 }
 
-/* Panel that slides in from the right */
+/* ── HISTORY PANEL ─────────────────────────────────── */
+.history-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 890;
+}
+
+.history-backdrop.open {
+  display: block;
+}
+
 .history-panel {
   position: fixed;
   top: 0;
-  right: -360px;          /* hidden off-screen */
+  right: -360px;
   width: 340px;
   height: 100%;
-  background: var(--card-bg);
+  background: var(--surface);
   border-left: 1px solid var(--border);
   z-index: 900;
   display: flex;
@@ -148,7 +138,7 @@
   right: 0;
 }
 
-.history-panel-header {
+.history-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -156,17 +146,16 @@
   border-bottom: 1px solid var(--border);
 }
 
-.history-panel-header h3 {
-  font-size: 16px;
-  font-weight: 600;
+.history-title {
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text);
-  margin: 0;
 }
 
-.history-close-btn {
+.history-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--muted);
   font-size: 20px;
   cursor: pointer;
   line-height: 1;
@@ -174,7 +163,7 @@
   transition: color 0.2s;
 }
 
-.history-close-btn:hover {
+.history-close:hover {
   color: var(--text);
 }
 
@@ -187,15 +176,22 @@
   gap: 10px;
 }
 
-/* Individual history card */
+.history-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 40px 20px;
+  line-height: 1.7;
+  font-style: italic;
+}
+
 .history-card {
-  background: var(--bg);
+  background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
 }
 
 .history-card:hover {
@@ -219,7 +215,6 @@
   font-weight: 700;
 }
 
-/* Sent = blue tint, Received = green tint */
 .history-card-type.sent {
   background: rgba(99, 179, 237, 0.15);
   color: #63b3ed;
@@ -232,16 +227,15 @@
 
 .history-card-time {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--muted);
 }
 
 .history-card-preview {
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
 }
 
 .history-card-code {
@@ -252,49 +246,68 @@
   letter-spacing: 0.05em;
 }
 
-.history-empty {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 14px;
-  padding: 40px 20px;
-  line-height: 1.6;
-}
-
-.history-clear-btn {
-  margin: 12px;
-  padding: 10px;
-  border-radius: 8px;
+/* ── HISTORY TOGGLE BUTTON in status bar ────────────── */
+.history-toggle-btn {
+  background: none;
   border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-muted);
-  font-family: var(--font);
+  color: var(--muted);
+  font-family: 'EB Garamond', serif;
   font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 100px;
   cursor: pointer;
   transition: all 0.2s;
-  text-align: center;
 }
 
-.history-clear-btn:hover {
-  border-color: #ff6b6b;
-  color: #ff6b6b;
+.history-toggle-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
-/* Backdrop when panel is open */
-.history-backdrop {
-  display: none;
+/* ── NOTIFICATION BANNER ────────────────────────────── */
+.notif-banner {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  z-index: 890;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  flex-wrap: wrap;
+  max-width: 90vw;
 }
 
-.history-backdrop.show {
-  display: block;
+.notif-banner-btn {
+  background: var(--accent);
+  border: none;
+  color: #000;
+  font-family: 'EB Garamond', serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-/* ─── Notification Toast ──────────────────── */
+.notif-banner-btn:hover { opacity: 0.85; }
 
-/* Container sits top-right, stacks multiple */
+.notif-banner-btn-ghost {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+/* ── TOAST NOTIFICATIONS ────────────────────────────── */
 #toast-container {
   position: fixed;
   top: 20px;
@@ -304,15 +317,15 @@
   flex-direction: column;
   gap: 10px;
   max-width: 300px;
-  pointer-events: none;   /* clicks pass through gaps */
+  pointer-events: none;
 }
 
 .toast {
-  background: var(--card-bg);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   pointer-events: all;
   display: flex;
   align-items: flex-start;
@@ -327,40 +340,19 @@
 }
 
 @keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translateX(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes toastOut {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-    max-height: 120px;
-    margin-bottom: 0;
-  }
-  to {
-    opacity: 0;
-    transform: translateX(40px);
-    max-height: 0;
-    margin-bottom: -10px;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
+  from { opacity: 1; transform: translateX(0); max-height: 120px; }
+  to   { opacity: 0; transform: translateX(40px); max-height: 0; padding: 0; }
 }
 
-/* Colored left border per type */
 .toast::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
+  left: 0; top: 0; bottom: 0;
   width: 3px;
   border-radius: 12px 0 0 12px;
 }
@@ -374,24 +366,20 @@
   font-size: 18px;
   line-height: 1;
   flex-shrink: 0;
-  margin-top: 1px;
 }
 
-.toast-body {
-  flex: 1;
-  min-width: 0;
-}
+.toast-body { flex: 1; min-width: 0; }
 
 .toast-title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   margin-bottom: 3px;
 }
 
 .toast-message {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--muted);
   line-height: 1.4;
   word-break: break-word;
 }
@@ -399,7 +387,7 @@
 .toast-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--muted);
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -408,49 +396,18 @@
   transition: color 0.2s;
 }
 
-.toast-close:hover {
-  color: var(--text);
-}
+.toast-close:hover { color: var(--text); }
 
-/* Progress bar that shrinks as toast expires */
 .toast-progress {
   position: absolute;
-  bottom: 0;
-  left: 0;
+  bottom: 0; left: 0;
   height: 2px;
   background: var(--accent);
   border-radius: 0 0 12px 12px;
   transition: width linear;
 }
 
-/* ─── Light mode overrides ────────────────── */
-
-body.light .qr-box {
-  background: #fff;
-  border-color: #ddd;
-}
-
-body.light .history-panel {
-  background: #fff;
-  border-color: #ddd;
-}
-
-body.light .history-card {
-  background: #f8f8f8;
-  border-color: #e0e0e0;
-}
-
-body.light .history-clear-btn {
-  border-color: #ccc;
-}
-
-body.light .toast {
-  background: #fff;
-  border-color: #ddd;
-}
-
-/* ─── Mobile adjustments ──────────────────── */
-
+/* ── MOBILE ─────────────────────────────────────────── */
 @media (max-width: 480px) {
   .history-panel {
     width: 100%;
@@ -464,12 +421,13 @@ body.light .toast {
     top: 12px;
   }
 
-  .expiry-options {
-    gap: 6px;
-  }
-
   .expiry-btn {
     padding: 4px 10px;
-    font-size: 11px;
+    font-size: 12px;
+  }
+
+  .notif-banner {
+    bottom: 80px;
+    font-size: 12px;
   }
 }
