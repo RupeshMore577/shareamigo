@@ -4,7 +4,7 @@
   "description": "Real-time cross-device sharing — text, files, rooms",
   "main": "server/server.js",
   "scripts": {
-    "start": "node server/server.js",
+   "start": "node server.js",
     "dev": "npx nodemon server/server.js"
   },
   "dependencies": {
