@@ -1,15 +1,21 @@
 // ═══════════════════════════════════════════════════════
 //  js/socket.js
-//  All server events fixed:
-//  - share-confirmed now handles object {code, expiresAt}
-//  - share-expired renamed to match server
-//  - addHistoryEntry used (not addToHistory)
-//  - showPushNotification used (not sendNotification)
+//  All server events — routes to correct handlers.
+//
+//  Fixed in this version:
+//  - share-confirmed handles object { code, expiresAt }
+//  - content-received correctly handles BOTH text and file
+//  - Text: shows in #received-text, shows copy button
+//  - File: shows filename/size, shows download link
+//  - share-expired matches server event name
+//  - Uses showPushNotification (from notifications.js)
+//  - Uses addHistoryEntry (from history.js)
 // ═══════════════════════════════════════════════════════
 
 const socket = io();
 
-let lastSentPreview = '';
+// Tracks last sent content preview for history
+window.lastSentPreview = '';
 
 // ── CONNECTION ─────────────────────────────────────────
 
@@ -22,10 +28,11 @@ socket.on('disconnect', () => {
 });
 
 socket.on('connect_error', (err) => {
-  console.error('Socket error:', err.message);
+  console.error('Socket connection error:', err.message);
 });
 
 // ── SEND CODE GENERATED ────────────────────────────────
+// Server sends plain string
 
 socket.on('send-code-generated', (code) => {
   generatedSendCode = code;
@@ -33,7 +40,7 @@ socket.on('send-code-generated', (code) => {
   const display = document.getElementById('send-code-display');
   if (display) display.textContent = code;
 
-  // QR encodes full URL → phone scans → receive screen opens
+  // Show QR — encodes full URL so phone scan works
   showReceiveQR('send-qr-wrapper', 'send-qr-box', code);
 });
 
@@ -48,17 +55,20 @@ socket.on('room-code-generated', (code) => {
   const btn = document.getElementById('create-room-btn');
   if (btn) btn.disabled = false;
 
-  // QR encodes full URL → phone scans → join screen opens
   showJoinQR('room-qr-wrapper-create', 'room-qr-box-create', code);
 });
 
 // ── SHARE CONFIRMED ────────────────────────────────────
 // Server sends object: { code, expiresAt }
 
-socket.on('share-confirmed', ({ code, expiresAt }) => {
+socket.on('share-confirmed', (payload) => {
+  // Handle both object and plain string for safety
+  const code      = (typeof payload === 'object') ? payload.code      : payload;
+  const expiresAt = (typeof payload === 'object') ? payload.expiresAt : null;
+
+  // Finish progress bar
   const pb = document.getElementById('send-progress-bar');
   const pw = document.getElementById('send-progress-wrap');
-
   if (pb) pb.style.width = '100%';
   setTimeout(() => {
     if (pw) pw.classList.remove('show');
@@ -66,20 +76,36 @@ socket.on('share-confirmed', ({ code, expiresAt }) => {
   }, 800);
 
   showStatus('send-status', 'success',
-    'Shared! Code: ' + code + ' — or let them scan the QR');
+    'Shared! Code: ' + code + ' — give it to the receiver');
 
-  // Save to history
-  addHistoryEntry('sent', lastSentPreview, code,
-    lastSentPreview.includes('.') ? 'file' : 'text');
+  // Save to history for logged-in users
+  if (typeof addHistoryEntry === 'function' && currentUser) {
+    const preview  = window.lastSentPreview || '';
+    const fileType = selectedFile ? 'file' : 'text';
+    addHistoryEntry('sent', preview, code, fileType);
+  }
 
-  showPushNotification('Content shared!', 'Code ' + code + ' is ready', 'success');
+  // Reset selected file after successful send
+  selectedFile = null;
+  const fileCard = document.getElementById('send-file-card');
+  if (fileCard) fileCard.classList.remove('show');
+
+  // Push notification if tab is hidden
+  if (typeof showPushNotification === 'function') {
+    showPushNotification('Content shared!', 'Code ' + code + ' is ready', 'success');
+  }
 });
 
 // ── CONTENT RECEIVED ───────────────────────────────────
+// Server sends: { type, data, name, size, expiresAt }
 
-socket.on('content-received', ({ type, data, name, size, expiresAt }) => {
+socket.on('content-received', (payload) => {
+  const { type, data, name, size, expiresAt } = payload;
+
+  // Hide status pill
   hideStatus('receive-status');
 
+  // Show the received box
   const box = document.getElementById('received-box');
   if (box) box.style.display = 'block';
 
@@ -88,27 +114,65 @@ socket.on('content-received', ({ type, data, name, size, expiresAt }) => {
   const dlLink  = document.getElementById('received-download');
 
   if (type === 'text') {
-    if (textEl)  textEl.textContent    = data;
-    if (copyBtn) copyBtn.style.display = 'inline-block';
-    if (dlLink)  dlLink.style.display  = 'none';
-
-    addHistoryEntry('received', data.slice(0, 80), '', 'text');
-
-  } else {
+    // ── TEXT RECEIVED ──────────────────────────────
+    // Show the text content
     if (textEl) {
-      textEl.innerHTML =
-        '<span style="font-weight:700">' + getExt(name) + '</span>' +
-        ' ' + name +
+      textEl.style.display = 'block';
+      textEl.textContent   = data;   // textContent prevents XSS
+    }
+
+    // Show copy button
+    if (copyBtn) copyBtn.style.display = 'inline-block';
+
+    // Hide download link
+    if (dlLink) dlLink.style.display = 'none';
+
+    // Save to history
+    if (typeof addHistoryEntry === 'function' && currentUser) {
+      addHistoryEntry('received', data.slice(0, 80), '', 'text');
+    }
+
+    console.log('📥 Text received, length:', data.length);
+
+  } else if (type === 'file') {
+    // ── FILE RECEIVED ──────────────────────────────
+    // Show file info
+    if (textEl) {
+      textEl.style.display = 'block';
+      textEl.innerHTML     =
+        '<span style="font-weight:700;color:var(--accent)">' +
+          getExt(name) +
+        '</span>' +
+        '&nbsp;&nbsp;' + name +
         '<br><span style="font-size:13px;color:var(--muted)">' + size + '</span>';
     }
+
+    // Hide copy button — can't copy a file
     if (copyBtn) copyBtn.style.display = 'none';
+
+    // Show download link
     if (dlLink) {
-      dlLink.href          = data;
-      dlLink.download      = name;
+      dlLink.href          = data;     // base64 data URL
+      dlLink.download      = name;     // filename for download
       dlLink.style.display = 'block';
     }
 
-    addHistoryEntry('received', name, '', 'file');
+    // Save to history
+    if (typeof addHistoryEntry === 'function' && currentUser) {
+      addHistoryEntry('received', name, '', 'file');
+    }
+
+    console.log('📥 File received:', name, size);
+
+  } else {
+    // Unknown type — show raw data as text
+    if (textEl) {
+      textEl.style.display = 'block';
+      textEl.textContent   = data;
+    }
+    if (copyBtn) copyBtn.style.display = 'inline-block';
+    if (dlLink)  dlLink.style.display  = 'none';
+    console.warn('📥 Unknown content type received:', type);
   }
 
   // Show expiry countdown if content expires
@@ -119,31 +183,47 @@ socket.on('content-received', ({ type, data, name, size, expiresAt }) => {
     hideExpiryExpired();
   }
 
-  showPushNotification(
-    'Content received!',
-    type === 'text' ? 'Text ready to copy' : 'File: ' + name,
-    'success'
-  );
+  // Push notification
+  if (typeof showPushNotification === 'function') {
+    showPushNotification(
+      'Content received!',
+      type === 'text'
+        ? data.slice(0, 50)
+        : 'File: ' + name,
+      'success'
+    );
+  }
 });
 
 // ── CONTENT NOT FOUND ──────────────────────────────────
 
-socket.on('content-not-found', () => {
-  showStatus('receive-status', 'error',
-    'Nothing found — check the code or content may have expired');
+socket.on('content-not-found', (payload) => {
+  const reason = payload && payload.reason ? payload.reason : 'not-found';
+
+  let message = 'Nothing found — check the code';
+  if (reason === 'expired') {
+    message = 'This content has expired and been deleted';
+  }
+
+  showStatus('receive-status', 'error', message);
   hideExpiryTimer();
   hideExpiryExpired();
+
   const box = document.getElementById('received-box');
   if (box) box.style.display = 'none';
+
+  console.log('❌ Content not found, reason:', reason);
 });
 
 // ── SHARE EXPIRED (sender gets this) ──────────────────
-// Server emits 'share-expired' — matches server.js
 
 socket.on('share-expired', ({ code }) => {
   showStatus('send-status', 'error',
-    'Your shared content on code ' + code + ' has expired and been deleted');
-  showPushNotification('Share expired', 'Code ' + code + ' was deleted', 'warning');
+    'Your content on code ' + code + ' has expired and been deleted');
+
+  if (typeof showPushNotification === 'function') {
+    showPushNotification('Share expired', 'Code ' + code + ' was deleted', 'warning');
+  }
 });
 
 // ── ROOM CREATED ───────────────────────────────────────
@@ -175,7 +255,7 @@ socket.on('room-joined', (code) => {
 
   addMsg('join', 'You joined room ' + code, 'sys');
 
-  // Show QR so this member can also share the room with others
+  // Show QR so member can also share room with others
   showJoinQR('room-qr-wrapper-join', 'room-qr-box-join', code);
 });
 
@@ -189,6 +269,7 @@ socket.on('room-not-found', () => {
 
 socket.on('room-history', (history) => {
   if (!history || !history.length) return;
+
   history.forEach(payload => {
     if (payload.type === 'text') {
       addMsg(currentRoomType, payload.message, 'them');
@@ -203,10 +284,16 @@ socket.on('room-history', (history) => {
 socket.on('room-message-received', (payload) => {
   if (payload.type === 'text') {
     addMsg(currentRoomType, payload.message, 'them');
-    showPushNotification('New message', payload.message.slice(0, 60), 'info');
+
+    if (typeof showPushNotification === 'function') {
+      showPushNotification('New message', payload.message.slice(0, 60), 'info');
+    }
   } else {
     addFileMsg(currentRoomType, payload, 'them');
-    showPushNotification('File shared in room', payload.name, 'info');
+
+    if (typeof showPushNotification === 'function') {
+      showPushNotification('File shared in room', payload.name, 'info');
+    }
   }
 });
 
@@ -214,7 +301,9 @@ socket.on('room-message-received', (payload) => {
 
 socket.on('user-joined-room', () => {
   addMsg(currentRoomType, 'Someone joined the room 👋', 'sys');
-  showPushNotification('Room', 'Someone joined the room', 'info');
+  if (typeof showPushNotification === 'function') {
+    showPushNotification('Room', 'Someone joined', 'info');
+  }
 });
 
 socket.on('user-left-room', () => {
@@ -225,6 +314,7 @@ socket.on('user-left-room', () => {
 
 socket.on('room-count', (count) => {
   const label = count === 1 ? '1 member' : count + ' members';
+
   if (currentRoomType === 'create') {
     const el = document.getElementById('create-member-count');
     if (el) el.textContent = label;
@@ -239,16 +329,22 @@ socket.on('room-count', (count) => {
 
 socket.on('room-closed', () => {
   addMsg(currentRoomType, '⚠️ The room was closed by the creator.', 'sys');
+
   const createInput = document.getElementById('create-msg-input');
   const joinInput   = document.getElementById('join-msg-input');
   if (createInput) createInput.disabled = true;
   if (joinInput)   joinInput.disabled   = true;
-  showPushNotification('Room closed', 'The creator has left', 'warning');
+
+  if (typeof showPushNotification === 'function') {
+    showPushNotification('Room closed', 'The creator has left', 'warning');
+  }
 });
 
 // ── SERVER ERROR ───────────────────────────────────────
 
 socket.on('server-error', ({ message }) => {
   console.error('Server error:', message);
-  showToast('Server error', message, 'error');
+  if (typeof showToast === 'function') {
+    showToast('Server error', message, 'error');
+  }
 });
