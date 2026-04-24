@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shareamigo</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap"
-    rel="stylesheet"
-  />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
@@ -93,17 +90,14 @@
   </div>
 
   <!-- HISTORY PANEL -->
-  <div class="history-backdrop" id="history-backdrop"
-       onclick="toggleHistory()"></div>
+  <div class="history-backdrop" id="history-backdrop" onclick="toggleHistory()"></div>
   <div class="history-panel" id="history-panel">
     <div class="history-header">
       <div class="history-title">🕘 Share History</div>
       <button class="history-close" onclick="toggleHistory()">✕</button>
     </div>
     <div class="history-list" id="history-list">
-      <div class="history-empty">
-        No history yet. Send or receive something to see it here.
-      </div>
+      <div class="history-empty">No history yet.</div>
     </div>
   </div>
 
@@ -116,6 +110,11 @@
     <label>Your secure send code</label>
     <div class="code-display" style="margin-bottom:16px">
       <div class="big-code" id="send-code-display">—</div>
+      <!-- Copy button -->
+      <button class="copy-code-btn" title="Copy code"
+              onclick="copyToClipboard(generatedSendCode, this)">
+        📋
+      </button>
       <button class="refresh-btn" title="Get new code"
               onclick="requestSendCode()">↻</button>
     </div>
@@ -125,23 +124,6 @@
       <div class="qr-label">Scan to receive</div>
       <div class="qr-box" id="send-qr-box"></div>
       <div class="qr-hint">Receiver scans this — code auto-fills on their device</div>
-    </div>
-
-    <!-- Expiry -->
-    <div class="expiry-section">
-      <label>Content expires after</label>
-      <div class="expiry-row">
-        <button class="expiry-btn active"
-                onclick="selectExpiry(0, this)">Never</button>
-        <button class="expiry-btn"
-                onclick="selectExpiry(300000, this)">5 min</button>
-        <button class="expiry-btn"
-                onclick="selectExpiry(900000, this)">15 min</button>
-        <button class="expiry-btn"
-                onclick="selectExpiry(1800000, this)">30 min</button>
-        <button class="expiry-btn"
-                onclick="selectExpiry(3600000, this)">1 hour</button>
-      </div>
     </div>
 
     <div class="divider">text</div>
@@ -170,6 +152,19 @@
       <div class="progress-bar" id="send-progress-bar"></div>
     </div>
 
+    <!-- Sent message confirmation shown to sender -->
+    <div id="send-confirmation" style="display:none;
+         background:var(--surface);border:1px solid var(--border);
+         border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--muted);
+                  font-style:italic;margin-bottom:6px">
+        ✓ You sent
+      </div>
+      <div id="send-confirmation-text" style="font-size:15px;
+           color:var(--text);word-break:break-word;white-space:pre-wrap">
+      </div>
+    </div>
+
     <div class="status-pill" id="send-status"></div>
     <button class="btn btn-accent" onclick="sendContent()">Send It →</button>
   </div>
@@ -188,6 +183,21 @@
              autocapitalize="off" spellcheck="false" />
     </div>
 
+    <!-- QR Scanner button -->
+    <button class="btn btn-ghost" style="margin-bottom:12px"
+            onclick="startQRScan('receive')">
+      📷 Scan QR Code Instead
+    </button>
+
+    <div id="qr-scanner-receive" style="display:none;margin-bottom:16px">
+      <video id="qr-video-receive" style="width:100%;border-radius:10px;
+             border:1px solid var(--border)"></video>
+      <button class="btn btn-ghost" style="margin-top:8px"
+              onclick="stopQRScan('receive')">
+        Stop Scanning
+      </button>
+    </div>
+
     <div class="status-pill" id="receive-status"></div>
     <button class="btn btn-success" onclick="receiveContent()">
       Get Content →
@@ -197,7 +207,8 @@
       <h3>✓ Content Received</h3>
       <div id="received-text"></div>
       <a id="received-download" style="display:none">
-        <button class="btn btn-success" style="margin-top:12px">
+        <button class="btn btn-success"
+                style="margin-top:12px;padding:16px;font-size:18px">
           ⬇ Download File
         </button>
       </a>
@@ -210,9 +221,8 @@
     <div class="expiry-timer" id="expiry-timer" style="display:none">
       <span class="dot"></span>Checking expiry...
     </div>
-
     <div class="expiry-expired" id="expiry-expired" style="display:none">
-      ⏰ This share has expired and the content has been deleted.
+      ⏰ This share has expired.
     </div>
   </div>
 
@@ -225,6 +235,11 @@
     <label>Your room code</label>
     <div class="code-display" style="margin-bottom:16px">
       <div class="big-code" id="create-code-display">—</div>
+      <!-- Copy button -->
+      <button class="copy-code-btn" title="Copy code"
+              onclick="copyToClipboard(generatedRoomCode, this)">
+        📋
+      </button>
       <button class="refresh-btn" title="Get new code"
               onclick="requestRoomCode()">↻</button>
     </div>
@@ -280,6 +295,21 @@
              autocapitalize="off" spellcheck="false" />
     </div>
 
+    <!-- QR Scanner button -->
+    <button class="btn btn-ghost" style="margin-bottom:12px"
+            onclick="startQRScan('join')">
+      📷 Scan QR Code Instead
+    </button>
+
+    <div id="qr-scanner-join" style="display:none;margin-bottom:16px">
+      <video id="qr-video-join" style="width:100%;border-radius:10px;
+             border:1px solid var(--border)"></video>
+      <button class="btn btn-ghost" style="margin-top:8px"
+              onclick="stopQRScan('join')">
+        Stop Scanning
+      </button>
+    </div>
+
     <div class="status-pill" id="join-status"></div>
     <button class="btn btn-pink" onclick="joinRoom()">Join Room →</button>
 
@@ -305,22 +335,13 @@
                 onclick="sendRoomMsg('join')">Send</button>
       </div>
     </div>
-
-    <!-- QR shown after joining so member can share room -->
-    <div class="qr-wrapper" id="room-qr-wrapper-join" style="display:none">
-      <div class="qr-label">Scan to join this room</div>
-      <div class="qr-box" id="room-qr-box-join"></div>
-      <div class="qr-hint">Share with others to invite them</div>
-    </div>
   </div>
 
-  <!-- ── SCRIPTS ── order matters ── -->
+  <!-- SCRIPTS — order matters -->
   <script src="/socket.io/socket.io.js"></script>
-
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <script src="js/firebase.js"></script>
@@ -336,6 +357,5 @@
   <script src="js/receive.js"></script>
   <script src="js/room.js"></script>
   <script src="js/auth.js"></script>
-
 </body>
 </html>
